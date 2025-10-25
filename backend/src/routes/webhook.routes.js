@@ -63,6 +63,7 @@ router.post('/clerk', async (req, res) => {
     const eventType = evt.type;
 
     console.log(`📨 Webhook event: ${eventType} for user ${id}`);
+    console.log('📦 Full webhook payload:', JSON.stringify(evt, null, 2));
 
     // Handle different event types
     try {
