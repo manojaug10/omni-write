@@ -113,14 +113,30 @@ async function handleUserCreated(data) {
 
     console.log(`🔄 Creating user ${id}...`);
     console.log('Email addresses:', JSON.stringify(email_addresses, null, 2));
+    console.log('Primary email ID:', primary_email_address_id);
+
+    // Check if email_addresses array exists and has items
+    if (!email_addresses || email_addresses.length === 0) {
+      console.error('❌ email_addresses is empty or missing for user:', id);
+      console.error('This is likely a Clerk test event with incomplete data.');
+      console.error('⚠️  SOLUTION: Use a real user signup instead of "Send Example" test.');
+      throw new Error('No email addresses provided in webhook event. Use real signup to test.');
+    }
 
     // Get primary email
-    const primaryEmail = email_addresses?.find(email => email.id === primary_email_address_id);
+    const primaryEmail = email_addresses.find(email => email.id === primary_email_address_id);
 
     if (!primaryEmail) {
       console.error('❌ No primary email found for user:', id);
+      console.error('Primary email ID:', primary_email_address_id);
       console.error('Available emails:', email_addresses);
-      throw new Error('No primary email found');
+      throw new Error(`Primary email (${primary_email_address_id}) not found in email_addresses array`);
+    }
+
+    // Validate email address field
+    if (!primaryEmail.email_address) {
+      console.error('❌ Primary email object has no email_address field:', primaryEmail);
+      throw new Error('Email address field is missing from primary email object');
     }
 
     // Construct full name
