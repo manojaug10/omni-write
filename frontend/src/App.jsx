@@ -1,34 +1,108 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useUser, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { isSignedIn, user, isLoaded } = useUser()
+
+  // Show loading state while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    )
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Navigation Bar */}
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold text-indigo-600">Omni Write</h1>
+            </div>
+            <div>
+              {isSignedIn && <UserButton />}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {isSignedIn ? (
+          // Signed In View
+          <div className="text-center">
+            <div className="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Welcome back, {user.firstName || user.username || 'Writer'}!
+              </h2>
+              <p className="text-gray-600 mb-8">
+                You're successfully authenticated with Clerk.
+              </p>
+
+              <div className="bg-indigo-50 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold text-indigo-900 mb-2">
+                  Your Profile
+                </h3>
+                <div className="text-left space-y-2 text-sm text-gray-700">
+                  <p><span className="font-medium">Email:</span> {user.primaryEmailAddress?.emailAddress}</p>
+                  <p><span className="font-medium">User ID:</span> {user.id}</p>
+                  <p><span className="font-medium">Joined:</span> {new Date(user.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <p className="text-gray-500 text-sm">
+                  Click your profile picture in the top right to manage your account or sign out.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Signed Out View
+          <div className="text-center">
+            <div className="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                Welcome to Omni Write
+              </h2>
+              <p className="text-xl text-gray-600 mb-8">
+                Your modern writing and content management platform
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+                <SignInButton mode="modal">
+                  <button className="px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md w-full sm:w-auto">
+                    Sign In
+                  </button>
+                </SignInButton>
+
+                <SignUpButton mode="modal">
+                  <button className="px-8 py-3 bg-white text-indigo-600 font-semibold rounded-lg border-2 border-indigo-600 hover:bg-indigo-50 transition-colors w-full sm:w-auto">
+                    Sign Up
+                  </button>
+                </SignUpButton>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Get Started
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Sign in or create an account to start writing and managing your content.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-12 pb-8 text-center text-gray-500 text-sm">
+        <p>Built with React, Vite, Tailwind CSS, and Clerk</p>
+      </footer>
+    </div>
   )
 }
 

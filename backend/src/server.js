@@ -1,10 +1,14 @@
 const express = require('express');
+const webhookRoutes = require('./routes/webhook.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Middleware
+// Webhook routes with raw body (must be before express.json() middleware)
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
+
+// Middleware for other routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
