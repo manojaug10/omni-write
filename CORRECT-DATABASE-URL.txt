@@ -1,0 +1,46 @@
+# ⚠️ DATABASE_URL FIX - CRITICAL
+
+## Your Current URL (BROKEN):
+postgresql://postgres:D0{`wq>2K4~mK^?~:p$W@db.jesvkdkkkbbxocvyaidn.supabase.co:5432/postgres
+
+## Problem:
+The password contains special characters that MUST be URL-encoded:
+{ ` > ~ ^ ? : $ 
+
+These break the connection string!
+
+## ✅ CORRECTED URL (USE THIS):
+postgresql://postgres:D0%7B%60wq%3E2K4%7EmK%5E%3F%7E%3Ap%24W@db.jesvkdkkkbbxocvyaidn.supabase.co:5432/postgres
+
+## Character Encoding Applied:
+{ → %7B
+` → %60
+> → %3E
+~ → %7E
+^ → %5E
+? → %3F
+: → %3A
+$ → %24
+
+## 🔧 HOW TO FIX IN RAILWAY:
+
+1. Go to: https://railway.app
+2. Open your backend service
+3. Click: "Variables" tab
+4. Find: DATABASE_URL
+5. Click "Edit" (pencil icon)
+6. Replace with: 
+   postgresql://postgres:D0%7B%60wq%3E2K4%7EmK%5E%3F%7E%3Ap%24W@db.jesvkdkkkbbxocvyaidn.supabase.co:5432/postgres
+7. Click "Update" or "Save"
+8. Wait 30 seconds for Railway to redeploy
+
+## 🧪 TEST AFTER FIXING:
+
+1. Create a new test user in Clerk Dashboard
+2. Check Railway logs - should see "✅ User created successfully"
+3. Check Supabase - user should appear!
+
+---
+
+THIS IS THE ISSUE! Your backend couldn't connect to Supabase because of unencoded special characters in the password.
+
