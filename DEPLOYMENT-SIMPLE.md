@@ -47,11 +47,22 @@ Make sure you have:
 
 ## Step 3: Configure the Backend
 
-1. Railway will ask **"What do you want to deploy?"**
-2. **Click** "Deploy Now" - Railway is smart and will detect your backend folder
-3. If it asks about the root directory:
-   - **Type:** `backend`
-   - **Click** "Deploy"
+**IMPORTANT:** Railway needs to know which folder has your backend code.
+
+1. Railway will show your repository
+2. **BEFORE clicking Deploy**, look for **"Settings"** or a **gear icon ⚙️**
+3. **Click** "Settings"
+4. **Find** "Root Directory" or "Service Root"
+5. **Type:** `backend` (exactly like this, lowercase)
+6. **Click** "Save" or go back
+7. **Now click** "Deploy" or it will deploy automatically
+
+**Alternative if you don't see Settings:**
+1. After deployment fails (like yours did), **click** on your service
+2. **Click** "Settings" tab
+3. **Scroll to** "Root Directory"
+4. **Change it to:** `backend`
+5. **Click** "Redeploy" at the top
 
 ## Step 4: Add Your Secret Keys (Environment Variables)
 
@@ -243,6 +254,27 @@ Person visits your website
 4. Go to Vercel → Your Project → Settings → Environment Variables
 5. Edit the `VITE_API_URL` if needed
 6. Redeploy (Vercel → Deployments → Click ⋯ → Redeploy)
+
+## Problem: Railway says "could not determine how to build the app"
+
+**This is the error you're seeing!**
+
+**Solution:**
+1. **Go to** Railway dashboard
+2. **Click** on your failed deployment/service
+3. **Click** "Settings" tab (on the left or top)
+4. **Scroll down** to find "Root Directory" or "Service Root"
+5. **Type:** `backend` (must be exactly this, lowercase)
+6. **Click** "Update" or "Save"
+7. **Go back** to the main page
+8. **Click** the three dots ⋯ (or "Deploy" button)
+9. **Click** "Redeploy"
+10. **Wait 2-3 minutes** - it should work now!
+
+**Why this happens:**
+- Railway was looking at your whole project (root folder)
+- Your backend code is in the `backend` folder
+- We need to tell Railway: "Hey, look in the backend folder!"
 
 ## Problem: "Cannot read environment variable"
 
