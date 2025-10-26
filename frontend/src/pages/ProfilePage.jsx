@@ -1,10 +1,11 @@
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useAuth } from '@clerk/clerk-react'
 import { useState, useEffect, useCallback } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 function ProfilePage() {
   const { user, isLoaded } = useUser()
+  const { getToken } = useAuth()
   const [dbUser, setDbUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -19,7 +20,7 @@ function ProfilePage() {
       setLoading(true)
       setError(null)
 
-      const token = await user.getToken()
+      const token = await getToken()
       const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -70,7 +71,7 @@ function ProfilePage() {
 
   const connectTwitter = useCallback(async () => {
     try {
-      const token = await user.getToken()
+      const token = await getToken()
       const redirect = `${window.location.origin}/profile`
       const url = `${API_BASE_URL}/api/auth/x?mode=json&redirect=${encodeURIComponent(redirect)}`
       const resp = await fetch(url, {
