@@ -23,7 +23,15 @@ router.get('/me', requireAuth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    return res.status(200).json({ user });
+
+    const sanitized = {
+      ...user,
+      socialConnections: Array.isArray(user.socialConnections)
+        ? user.socialConnections.map(({ accessToken, refreshToken, ...rest }) => rest)
+        : [],
+    };
+
+    return res.status(200).json({ user: sanitized });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch user', details: error.message });
   }
@@ -72,5 +80,4 @@ router.delete('/me', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
-
 

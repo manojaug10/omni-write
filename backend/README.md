@@ -84,7 +84,44 @@ Create a `.env` file in the root directory with the following variables:
 PORT=3000
 NODE_ENV=development
 DATABASE_URL="postgresql://user:password@localhost:5432/dbname?schema=public"
+
+# X (Twitter) OAuth 2.0 (Production)
+X_CLIENT_ID="your-x-client-id"
+X_CLIENT_SECRET="your-x-client-secret"
+X_REDIRECT_URI="https://omni-write-production.up.railway.app/api/auth/x/callback"
+X_DEFAULT_SCOPES="tweet.read users.read offline.access"
+X_SUCCESS_REDIRECT_URI="https://omni-write.vercel.app/profile"
+X_FAILURE_REDIRECT_URI="https://omni-write.vercel.app/profile"
+X_AUTH_BASE="https://twitter.com/i/oauth2/authorize"
+X_TOKEN_URL="https://api.twitter.com/2/oauth2/token"
+X_API_BASE="https://api.twitter.com/2"
 ```
+
+## X (Twitter) OAuth Setup
+
+1. **Register the app in the X Developer Portal**
+   - Create a project/app, enable OAuth 2.0 with PKCE, and set required scopes.
+   - Add the redirect URI `X_REDIRECT_URI`:
+     - Local: `http://localhost:3000/api/auth/x/callback`
+     - Production: `https://omni-write-production.up.railway.app/api/auth/x/callback`
+
+2. **Configure environment variables**
+   - Copy Client ID/Secret into `X_CLIENT_ID` and `X_CLIENT_SECRET`.
+   - Set `X_REDIRECT_URI` to your backend callback endpoint.
+   - Optionally set success/failure redirect URIs to return to your frontend.
+
+3. **Start the OAuth flow**
+   - Authenticated users can hit `GET /api/auth/x` to be redirected to X for login/consent.
+   - SPAs can use JSON mode to receive the authorization URL and then navigate:
+     - `GET /api/auth/x?mode=json&redirect=<return_url>` → `{ authorizationUrl }`
+   - X returns to `/api/auth/x/callback`, which exchanges the code for tokens, fetches the X profile, and persists the connection.
+
+4. **Refreshing tokens**
+   - Call `POST /api/x/refresh` to refresh the access token using the stored refresh token.
+
+5. **Using the connection**
+   - Fetch the connected profile with `GET /api/x/me`.
+   - Post a tweet with `POST /api/x/tweet` JSON body: `{ "text": "Hello from Omni Write" }` (requires write scopes).
 
 ## Prisma Setup
 
@@ -109,4 +146,3 @@ npx prisma studio
 - **prisma**: Database ORM and migration tool
 - **@prisma/client**: Prisma client for database queries
 - **nodemon**: (dev) Auto-restart server on file changes
-

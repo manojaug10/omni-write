@@ -1,39 +1,98 @@
 import { useUser } from '@clerk/clerk-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 function ProfilePage() {
   const { user, isLoaded } = useUser()
   const [dbUser, setDbUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [banner, setBanner] = useState(null)
 
-  useEffect(() => {
-    async function fetchUserFromDB() {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/users/me`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getToken()}`
-          }
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          setDbUser(data.user)
-        } else {
-          setError('Failed to load profile data')
-        }
-      } catch (err) {
-        setError('Error connecting to server')
-        console.error('Profile fetch error:', err)
-      } finally {
-        setLoading(false)
-      }
+  const fetchUserFromDB = useCallback(async () => {
+    if (!user) {
+      return
     }
 
+    try {
+      setLoading(true)
+      setError(null)
+
+      const token = await user.getToken()
+      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDbUser(data.user)
+      } else if (response.status === 401) {
+        setError('Session expired. Please sign in again.')
+      } else {
+        setError('Failed to load profile data')
+      }
+    } catch (err) {
+      setError('Error connecting to server')
+      console.error('Profile fetch error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
     if (isLoaded && user) {
       fetchUserFromDB()
     }
-  }, [user, isLoaded])
+  }, [isLoaded, user, fetchUserFromDB])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const status = params.get('x_oauth')
+    const message = params.get('message')
+    if (status === 'success') {
+      setBanner({ type: 'success', message: 'Twitter account connected successfully.' })
+      // Clean the query params
+      const url = new URL(window.location.href)
+      url.searchParams.delete('x_oauth')
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    } else if (status === 'error') {
+      setBanner({ type: 'error', message: message || 'Failed to connect Twitter account.' })
+      const url = new URL(window.location.href)
+      url.searchParams.delete('x_oauth')
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [])
+
+  const connectTwitter = useCallback(async () => {
+    try {
+      const token = await user.getToken()
+      const redirect = `${window.location.origin}/profile`
+      const url = `${API_BASE_URL}/api/auth/x?mode=json&redirect=${encodeURIComponent(redirect)}`
+      const resp = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+      })
+      if (!resp.ok) {
+        throw new Error('Failed to initiate Twitter OAuth')
+      }
+      const data = await resp.json()
+      if (!data.authorizationUrl) {
+        throw new Error('Missing authorization URL')
+      }
+      window.location.href = data.authorizationUrl
+    } catch (e) {
+      console.error('Connect Twitter failed:', e)
+      setBanner({ type: 'error', message: e.message || 'Unable to start Twitter OAuth.' })
+    }
+  }, [user])
 
   if (!isLoaded || loading) {
     return (
@@ -47,6 +106,12 @@ function ProfilePage() {
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="bg-white rounded-lg shadow-md p-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Your Profile</h1>
+
+        {banner && (
+          <div className={`mb-6 rounded-lg p-4 border ${banner.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            {banner.message}
+          </div>
+        )}
 
         {/* Clerk User Data */}
         <div className="mb-8">
@@ -123,6 +188,13 @@ function ProfilePage() {
           <p className="text-sm text-gray-500 mb-4">
             To update your profile information, click your profile picture in the top right corner.
           </p>
+          <button
+            type="button"
+            onClick={connectTwitter}
+            className="inline-flex items-center px-4 py-2 rounded-md bg-black text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800"
+          >
+            Connect Twitter
+          </button>
         </div>
       </div>
     </main>
@@ -130,4 +202,3 @@ function ProfilePage() {
 }
 
 export default ProfilePage
-

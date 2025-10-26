@@ -18,4 +18,24 @@ model User {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  socialConnections SocialConnection[]
+}
+
+model SocialConnection {
+  id                   String    @id @default(cuid())
+  provider             String // e.g., "THREADS"
+  providerUserId       String
+  accessToken          String    @db.Text
+  accessTokenExpiresAt DateTime?
+  refreshToken         String?   @db.Text
+  username             String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@unique([provider, providerUserId])
+  @@unique([provider, userId])
 }

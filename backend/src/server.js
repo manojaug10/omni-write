@@ -1,8 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const { clerkMiddleware } = require('@clerk/express');
-const webhookRoutes = require('./routes/webhook.routes');
+const healthRoutes = require('./routes/health.routes');
 const userRoutes = require('./routes/user.routes');
+const webhookRoutes = require('./routes/webhook.routes');
+const xRoutes = require('./routes/x.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,6 +41,7 @@ app.get('/api/health', (req, res) => {
 
 // Protected user routes
 app.use('/api/users', userRoutes);
+app.use('/api', xRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
