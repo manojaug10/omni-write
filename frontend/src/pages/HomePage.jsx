@@ -1,78 +1,51 @@
-import { useUser, SignInButton, SignUpButton } from '@clerk/clerk-react'
+import { useUser } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
 
 function HomePage() {
   const { isSignedIn, user } = useUser()
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <main className="flex items-center justify-center min-h-[calc(100vh-180px)]">
       {isSignedIn ? (
-        // Signed In View
-        <div className="text-center">
-          <div className="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Welcome back, {user.firstName || user.username || 'Writer'}!
-            </h2>
-            <p className="text-gray-600 mb-8">
-              You're successfully authenticated with Clerk.
-            </p>
-
-            <div className="bg-indigo-50 rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-semibold text-indigo-900 mb-2">
-                Your Profile
-              </h3>
-              <div className="text-left space-y-2 text-sm text-gray-700">
-                <p><span className="font-medium">Email:</span> {user.primaryEmailAddress?.emailAddress}</p>
-                <p><span className="font-medium">User ID:</span> {user.id}</p>
-                <p><span className="font-medium">Joined:</span> {new Date(user.createdAt).toLocaleDateString()}</p>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <Link 
-                to="/profile"
-                className="inline-block px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                View Full Profile
-              </Link>
-            </div>
-          </div>
+        // Signed In View - Simple welcome
+        <div className="text-center max-w-2xl mx-auto px-4">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            Welcome back, {user.firstName || 'Writer'}!
+          </h1>
+          <p className="text-xl text-gray-600 mb-10">
+            Ready to continue your writing journey?
+          </p>
+          <Link
+            to="/profile"
+            className="inline-block px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+          >
+            Go to Dashboard
+          </Link>
         </div>
       ) : (
-        // Signed Out View
-        <div className="text-center">
-          <div className="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Welcome to Omni Write
-            </h2>
-            <p className="text-xl text-gray-600 mb-8">
-              Your modern writing and content management platform
-            </p>
+        // Signed Out View - Clean landing
+        <div className="text-center max-w-3xl mx-auto px-4">
+          <h1 className="text-6xl md:text-7xl font-bold text-gray-900 mb-6">
+            Omni Write
+          </h1>
+          <p className="text-2xl md:text-3xl text-gray-600 mb-12">
+            Your modern writing platform
+          </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-              <Link 
-                to="/sign-in"
-                className="px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md w-full sm:w-auto text-center"
-              >
-                Sign In
-              </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              to="/sign-up"
+              className="px-10 py-4 bg-indigo-600 text-white text-lg font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all w-full sm:w-auto"
+            >
+              Get Started
+            </Link>
 
-              <Link 
-                to="/sign-up"
-                className="px-8 py-3 bg-white text-indigo-600 font-semibold rounded-lg border-2 border-indigo-600 hover:bg-indigo-50 transition-colors w-full sm:w-auto text-center"
-              >
-                Sign Up
-              </Link>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Get Started
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Sign in or create an account to start writing and managing your content.
-              </p>
-            </div>
+            <Link
+              to="/sign-in"
+              className="px-10 py-4 bg-white text-indigo-600 text-lg font-semibold rounded-lg border-2 border-indigo-600 hover:bg-indigo-50 transition-colors shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all w-full sm:w-auto"
+            >
+              Sign In
+            </Link>
           </div>
         </div>
       )}
