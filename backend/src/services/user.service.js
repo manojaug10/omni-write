@@ -101,10 +101,23 @@ async function findUserByEmail(email) {
   }
 }
 
+/**
+ * Find a user by internal DB id
+ */
+async function findUserById(id) {
+  try {
+    return await prisma.user.findUnique({ where: { id } });
+  } catch (error) {
+    console.error('Error finding user by id:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createUser,
   updateUser,
   deleteUser,
   findUserByClerkId,
   findUserByEmail,
+  findUserById,
 };

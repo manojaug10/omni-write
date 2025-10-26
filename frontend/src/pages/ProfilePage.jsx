@@ -10,6 +10,7 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [banner, setBanner] = useState(null)
+  const [xConnection, setXConnection] = useState(null)
 
   const fetchUserFromDB = useCallback(async () => {
     if (!user) {
@@ -49,12 +50,37 @@ function ProfilePage() {
     }
   }, [isLoaded, user, fetchUserFromDB])
 
+  const fetchXConnection = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/x/connection`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        setXConnection(data.connection)
+      } else {
+        setXConnection(null)
+      }
+    } catch (e) {
+      setXConnection(null)
+    }
+  }, [getToken])
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetchXConnection()
+    }
+  }, [isLoaded, user, fetchXConnection])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const status = params.get('x_oauth')
     const message = params.get('message')
     if (status === 'success') {
       setBanner({ type: 'success', message: 'Twitter account connected successfully.' })
+      fetchXConnection()
       // Clean the query params
       const url = new URL(window.location.href)
       url.searchParams.delete('x_oauth')
@@ -94,6 +120,89 @@ function ProfilePage() {
       setBanner({ type: 'error', message: e.message || 'Unable to start Twitter OAuth.' })
     }
   }, [user])
+
+  const disconnectTwitter = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/x/connection`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        setBanner({ type: 'success', message: 'Twitter account disconnected.' })
+        setXConnection(null)
+      } else {
+        const data = await resp.json().catch(() => null)
+        setBanner({ type: 'error', message: data?.message || 'Failed to disconnect Twitter.' })
+      }
+    } catch (e) {
+      setBanner({ type: 'error', message: e.message || 'Failed to disconnect Twitter.' })
+    }
+  }, [getToken])
+
+  const [composeText, setComposeText] = useState('')
+  const [scheduleAt, setScheduleAt] = useState('')
+  const [scheduled, setScheduled] = useState([])
+
+  const loadScheduled = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/x/tweet/schedule`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        setScheduled(data.scheduled || [])
+      }
+    } catch {}
+  }, [getToken])
+
+  useEffect(() => {
+    if (xConnection) {
+      loadScheduled()
+    }
+  }, [xConnection, loadScheduled])
+
+  const submitSchedule = useCallback(async (e) => {
+    e.preventDefault()
+    try {
+      const token = await getToken()
+      const body = { text: composeText, scheduledAt: scheduleAt }
+      const resp = await fetch(`${API_BASE_URL}/api/x/tweet/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      if (resp.ok) {
+        setComposeText('')
+        setScheduleAt('')
+        setBanner({ type: 'success', message: 'Tweet scheduled.' })
+        loadScheduled()
+      } else {
+        const data = await resp.json().catch(() => null)
+        setBanner({ type: 'error', message: data?.message || 'Failed to schedule tweet.' })
+      }
+    } catch (e) {
+      setBanner({ type: 'error', message: e.message || 'Failed to schedule tweet.' })
+    }
+  }, [composeText, scheduleAt, getToken, loadScheduled])
+
+  const cancelScheduled = useCallback(async (id) => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/x/tweet/schedule/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        loadScheduled()
+      }
+    } catch {}
+  }, [getToken, loadScheduled])
 
   if (!isLoaded || loading) {
     return (
@@ -189,13 +298,70 @@ function ProfilePage() {
           <p className="text-sm text-gray-500 mb-4">
             To update your profile information, click your profile picture in the top right corner.
           </p>
-          <button
-            type="button"
-            onClick={connectTwitter}
-            className="inline-flex items-center px-4 py-2 rounded-md bg-black text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800"
-          >
-            Connect Twitter
-          </button>
+          {xConnection ? (
+            <div className="flex items-center gap-3">
+              <span className="text-gray-700">Connected as <span className="font-medium">@{xConnection.username || xConnection.providerUserId}</span></span>
+              <button
+                type="button"
+                onClick={disconnectTwitter}
+                className="inline-flex items-center px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={connectTwitter}
+              className="inline-flex items-center px-4 py-2 rounded-md bg-black text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800"
+            >
+              Connect Twitter
+            </button>
+          )}
+
+          {xConnection && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-3">Compose tweet</h3>
+              <form onSubmit={submitSchedule} className="space-y-3">
+                <textarea
+                  value={composeText}
+                  onChange={(e) => setComposeText(e.target.value)}
+                  rows={4}
+                  className="w-full border rounded-md p-3"
+                  placeholder="What's happening?"
+                />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="datetime-local"
+                    value={scheduleAt}
+                    onChange={(e) => setScheduleAt(e.target.value)}
+                    className="border rounded-md p-2"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                  >
+                    Schedule
+                  </button>
+                </div>
+              </form>
+
+              <h4 className="text-md font-semibold mt-6 mb-2">Scheduled</h4>
+              <ul className="space-y-2">
+                {scheduled.map((s) => (
+                  <li key={s.id} className="border rounded-md p-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-gray-900">{s.text}</div>
+                      <div className="text-sm text-gray-500">{new Date(s.scheduledAt).toLocaleString()} • {s.status}</div>
+                    </div>
+                    {s.status === 'QUEUED' && (
+                      <button onClick={() => cancelScheduled(s.id)} className="px-3 py-1.5 rounded-md border">Cancel</button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </main>

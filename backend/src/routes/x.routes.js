@@ -3,6 +3,7 @@ const userService = require('../services/user.service');
 const { PROVIDERS, upsertConnection, getConnectionByUserId } = require('../services/socialConnection.service');
 const xService = require('../services/x.service');
 const { createState, consumeState } = require('../utils/oauthStateStore');
+const scheduledService = require('../services/scheduledTweet.service');
 
 const router = express.Router();
 
@@ -88,15 +89,24 @@ router.get('/auth/x/callback', async (req, res) => {
 
     const accessTokenExpiresAt = typeof expiresIn === 'number' ? new Date(Date.now() + expiresIn * 1000) : null;
 
-    const connection = await upsertConnection({
-      userId: dbUser.id,
-      provider: PROVIDERS.X,
-      providerUserId,
-      accessToken,
-      accessTokenExpiresAt,
-      refreshToken,
-      username: username || null,
-    });
+    let connection;
+    try {
+      connection = await upsertConnection({
+        userId: dbUser.id,
+        provider: PROVIDERS.X,
+        providerUserId,
+        accessToken,
+        accessTokenExpiresAt,
+        refreshToken,
+        username: username || null,
+      });
+    } catch (e) {
+      // Unique constraint violation: this X account is already linked to a different Omni Write user
+      if (e && (e.code === 'P2002' || (e.meta && Array.isArray(e.meta.target) && e.meta.target.includes('provider') && e.meta.target.includes('providerUserId')))) {
+        return handleCallbackRedirect(res, { success: false, message: 'This X account is already connected to another Omni Write user.', redirect: statePayload.redirect, statusCode: 409 });
+      }
+      throw e;
+    }
 
     return handleCallbackRedirect(res, { success: true, redirect: statePayload.redirect, data: { connectionId: connection.id } });
   } catch (callbackError) {
@@ -153,6 +163,45 @@ router.get('/x/me', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/x/connection - fetch connection summary from DB
+router.get('/x/connection', requireAuth, async (req, res) => {
+  try {
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const connection = await getConnectionByUserId(dbUser.id, PROVIDERS.X);
+    if (!connection) return res.status(404).json({ error: 'XConnectionNotFound' });
+    return res.status(200).json({
+      connection: {
+        id: connection.id,
+        provider: connection.provider,
+        username: connection.username,
+        providerUserId: connection.providerUserId,
+        accessTokenExpiresAt: connection.accessTokenExpiresAt,
+        createdAt: connection.createdAt,
+        updatedAt: connection.updatedAt,
+      },
+    });
+  } catch (e) {
+    console.error('X connection fetch error:', e);
+    return res.status(500).json({ error: 'XConnectionFetchFailed', message: e.message });
+  }
+});
+
+// DELETE /api/x/connection - disconnect (delete) the connection
+router.delete('/x/connection', requireAuth, async (req, res) => {
+  try {
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const existing = await getConnectionByUserId(dbUser.id, PROVIDERS.X);
+    if (!existing) return res.status(404).json({ error: 'XConnectionNotFound' });
+    await require('../services/socialConnection.service').deleteConnection(dbUser.id, PROVIDERS.X);
+    return res.status(200).json({ status: 'ok' });
+  } catch (e) {
+    console.error('X disconnect error:', e);
+    return res.status(500).json({ error: 'XDisconnectFailed', message: e.message });
+  }
+});
+
 // POST /api/x/tweet - post text
 router.post('/x/tweet', requireAuth, async (req, res) => {
   try {
@@ -170,7 +219,51 @@ router.post('/x/tweet', requireAuth, async (req, res) => {
   }
 });
 
-function handleCallbackRedirect(res, { success, message, redirect, data }) {
+// POST /api/x/tweet/schedule - schedule a tweet
+router.post('/x/tweet/schedule', requireAuth, async (req, res) => {
+  try {
+    const { text, scheduledAt } = req.body || {};
+    if (!text || typeof text !== 'string') return res.status(400).json({ error: 'MissingText' });
+    if (!scheduledAt) return res.status(400).json({ error: 'MissingScheduledAt' });
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const st = await scheduledService.createScheduledTweet(dbUser.id, text, scheduledAt);
+    return res.status(201).json({ scheduled: st });
+  } catch (e) {
+    console.error('X schedule tweet error:', e);
+    return res.status(500).json({ error: 'XScheduleFailed', message: e.message });
+  }
+});
+
+// GET /api/x/tweet/schedule - list scheduled tweets for current user
+router.get('/x/tweet/schedule', requireAuth, async (req, res) => {
+  try {
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const items = await scheduledService.listScheduledTweetsForUser(dbUser.id, 50);
+    return res.status(200).json({ scheduled: items });
+  } catch (e) {
+    console.error('X list scheduled error:', e);
+    return res.status(500).json({ error: 'XListScheduledFailed', message: e.message });
+  }
+});
+
+// DELETE /api/x/tweet/schedule/:id - cancel
+router.delete('/x/tweet/schedule/:id', requireAuth, async (req, res) => {
+  try {
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const id = req.params.id;
+    const result = await scheduledService.cancelScheduledTweet(dbUser.id, id);
+    if (result.count === 0) return res.status(404).json({ error: 'NotFound' });
+    return res.status(200).json({ status: 'ok' });
+  } catch (e) {
+    console.error('X cancel scheduled error:', e);
+    return res.status(500).json({ error: 'XCancelScheduledFailed', message: e.message });
+  }
+});
+
+function handleCallbackRedirect(res, { success, message, redirect, data, statusCode }) {
   // Reuse Threads redirect URIs if desired; fallback to root
   const successRedirectUri = process.env.X_SUCCESS_REDIRECT_URI || process.env.THREADS_SUCCESS_REDIRECT_URI;
   const failureRedirectUri = process.env.X_FAILURE_REDIRECT_URI || process.env.THREADS_FAILURE_REDIRECT_URI;
@@ -185,7 +278,7 @@ function handleCallbackRedirect(res, { success, message, redirect, data }) {
   }
 
   if (success) return res.status(200).json({ status: 'ok', message: message || 'X account connected', data });
-  return res.status(400).json({ status: 'error', message: message || 'X OAuth failed' });
+  return res.status(statusCode || 400).json({ status: 'error', message: message || 'X OAuth failed' });
 }
 
 module.exports = router;

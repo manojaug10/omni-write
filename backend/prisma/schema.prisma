@@ -39,3 +39,24 @@ model SocialConnection {
   @@unique([provider, providerUserId])
   @@unique([provider, userId])
 }
+
+enum ScheduledTweetStatus {
+  QUEUED
+  POSTED
+  FAILED
+  CANCELLED
+}
+
+model ScheduledTweet {
+  id           String                @id @default(cuid())
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  provider     String                @default("X")
+  text         String
+  scheduledAt  DateTime
+  status       ScheduledTweetStatus  @default(QUEUED)
+  postedTweetId String?
+  errorMessage String?               @db.Text
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+}

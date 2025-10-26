@@ -5,6 +5,7 @@ const healthRoutes = require('./routes/health.routes');
 const userRoutes = require('./routes/user.routes');
 const webhookRoutes = require('./routes/webhook.routes');
 const xRoutes = require('./routes/x.routes');
+const { processDueTweets } = require('./jobs/processScheduledTweets');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,4 +75,12 @@ process.on('SIGTERM', () => {
     console.log('HTTP server closed');
   });
 });
+
+// Background job: process scheduled tweets every 30 seconds
+const SCHEDULE_INTERVAL_MS = Number(process.env.SCHEDULE_INTERVAL_MS || 30000);
+setInterval(() => {
+  processDueTweets().catch((e) => {
+    console.error('Scheduled tweets processing error:', e);
+  });
+}, SCHEDULE_INTERVAL_MS);
 
