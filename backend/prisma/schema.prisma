@@ -20,6 +20,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   socialConnections SocialConnection[]
+  scheduledTweets   ScheduledTweet[]
 }
 
 model SocialConnection {
