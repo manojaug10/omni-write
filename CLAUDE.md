@@ -35,10 +35,79 @@ Omni Write is a full-stack writing/content management application built with a m
 
 ## Development Progress
 
+### Session 4 - October 27, 2025
+
+#### ✅ X (Twitter) OAuth Integration + Scheduled Tweets
+**Status:** Completed October 27, 2025
+
+**What was accomplished:**
+
+1. **X OAuth PKCE Implementation**
+   - Implemented OAuth 2.0 with PKCE (Proof Key for Code Exchange)
+   - Created authorization flow with code verifier/challenge
+   - Token exchange and refresh token handling
+   - User profile fetching from X API
+   - Tweet posting capability
+
+2. **Database Schema Updates**
+   - Added `SocialConnection` model for storing OAuth tokens
+   - Added `ScheduledTweet` model with status tracking (QUEUED, POSTED, FAILED, CANCELLED)
+   - Added relations between User, SocialConnection, and ScheduledTweet
+
+3. **API Endpoints**
+   - `GET /api/auth/x/authorize` - Initiate X OAuth flow
+   - `GET /api/auth/x/callback` - Handle OAuth callback
+   - `GET /api/social-connections` - List user's connected accounts
+   - `DELETE /api/social-connections/:provider` - Disconnect account
+   - `POST /api/scheduled-tweets` - Schedule a tweet
+   - `GET /api/scheduled-tweets` - List user's scheduled tweets
+   - `DELETE /api/scheduled-tweets/:id` - Cancel scheduled tweet
+
+4. **Background Job System**
+   - Implemented scheduled tweet processing job
+   - Runs every 30 seconds to check for due tweets
+   - Automatically posts tweets at scheduled time
+   - Updates tweet status and handles errors
+
+5. **Critical Bug Fixes**
+   - **Fixed PostgreSQL prepared statement error (42P05)**
+     - Created Prisma Client singleton pattern
+     - Added `pgbouncer=true` parameter to DATABASE_URL
+     - Resolved connection pooling conflicts in serverless environment
+   - **Fixed missing table errors**
+     - Added `DIRECT_DATABASE_URL` for schema migrations
+     - Successfully created all tables in production database
+   - **Resolved X OAuth callback errors**
+     - Fixed database connection issues during OAuth flow
+
+**Files created:**
+- `backend/src/routes/x.routes.js` - X OAuth routes
+- `backend/src/services/x.service.js` - X API integration
+- `backend/src/services/socialConnection.service.js` - Social connection CRUD
+- `backend/src/services/scheduledTweet.service.js` - Scheduled tweet CRUD
+- `backend/src/jobs/processScheduledTweets.js` - Background job for posting
+- `backend/src/utils/pkce.js` - PKCE helper functions
+- `backend/src/lib/prisma.js` - Prisma singleton
+
+**Files modified:**
+- `backend/prisma/schema.prisma` - Added SocialConnection, ScheduledTweet models, directUrl
+- `backend/src/server.js` - Added X routes, scheduled tweet job
+- `backend/.env` - Added X OAuth credentials, DIRECT_DATABASE_URL, pgbouncer parameter
+- `backend/.env.example` - Updated with new environment variables
+
+**Git commits:**
+- "feat(x-oauth): implement X OAuth PKCE, routes, UI, docs" (5584335)
+- "feat: Add X (Twitter) scheduled tweets functionality" (35d149e)
+- "feat: Add scheduledTweets relation to User model" (c519658)
+- "fix: Resolve PostgreSQL prepared statement error in production" (9fefbfb)
+- "feat: Add direct database URL for schema migrations" (972fa88)
+
+---
+
 ### Session 3 - October 26, 2025
 
 #### ✅ Phase 1 Complete: Authentication & User Management
-**Status:** 98.6% Complete (69/70 tasks completed) ⬆️ **UPDATED**
+**Status:** 98.6% Complete (69/70 tasks completed)
 
 **Overall Achievement:** Phase 1 is functionally complete! All code is deployed and working. The webhook endpoint is live and tested - it just needs to be configured in Clerk Dashboard (5-minute manual setup).
 

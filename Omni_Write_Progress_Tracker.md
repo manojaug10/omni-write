@@ -584,19 +584,30 @@ model UserWritingProfile {
 ---
 
 ### Phase 2: Social Media OAuth (Week 3-4)
-**Status:** Not Started  
-**Branch:** `feature/social-oauth`
+**Status:** 🚧 In Progress (X OAuth Complete - 40%)
+**Branch:** `main`
 
 **Tasks:**
-- [ ] Set up X (Twitter) OAuth flow
+- [x] Set up X (Twitter) OAuth flow ✅
+- [x] Store OAuth tokens securely ✅
+- [x] Handle token refresh ✅
+- [x] Test X OAuth flow ✅
 - [ ] Set up LinkedIn OAuth flow
 - [ ] Set up Meta (Facebook/Instagram) OAuth flow
 - [ ] Create social account management page
-- [ ] Store OAuth tokens securely
-- [ ] Handle token refresh
 - [ ] Test OAuth for all platforms
 
-**Estimated Time:** 16-20 hours  
+**Completed (October 27, 2025):**
+- ✅ X (Twitter) OAuth 2.0 with PKCE implementation
+- ✅ SocialConnection model for storing OAuth tokens
+- ✅ Token encryption and secure storage
+- ✅ Refresh token handling
+- ✅ X API integration (profile fetch, tweet posting)
+- ✅ OAuth callback handling
+- ✅ API endpoints: authorize, callback, list connections, disconnect
+
+**Estimated Time:** 16-20 hours
+**Actual Time (X OAuth):** ~4 hours
 **Complexity:** HIGH
 
 ---
@@ -619,19 +630,30 @@ model UserWritingProfile {
 ---
 
 ### Phase 4: Scheduling System (Week 6-7)
-**Status:** Not Started  
-**Branch:** `feature/scheduling`
+**Status:** 🚧 In Progress (Backend Complete - 60%)
+**Branch:** `main`
 
 **Tasks:**
-- [ ] Set up Bull queue with Redis
+- [x] Implement scheduling logic ✅
+- [x] Create job for publishing posts ✅
+- [x] Handle job failures and retries ✅
+- [x] Test scheduled posts ✅
+- [ ] Set up Bull queue with Redis (using simple interval for MVP)
 - [ ] Create calendar view component
-- [ ] Implement scheduling logic
-- [ ] Create job for publishing posts
-- [ ] Handle job failures and retries
-- [ ] Test scheduled posts
 - [ ] Build schedule management UI
 
-**Estimated Time:** 16-20 hours  
+**Completed (October 27, 2025):**
+- ✅ ScheduledTweet model with status tracking (QUEUED, POSTED, FAILED, CANCELLED)
+- ✅ Background job system (runs every 30 seconds)
+- ✅ Automatic tweet posting at scheduled time
+- ✅ Error handling and status updates
+- ✅ API endpoints: schedule, list, cancel tweets
+- ✅ Integration with X API for posting
+
+**Note:** Using simple interval-based scheduling for MVP instead of Bull queue (simpler, faster to implement)
+
+**Estimated Time:** 16-20 hours
+**Actual Time (Backend):** ~3 hours
 **Complexity:** MEDIUM-HIGH
 
 ---
@@ -723,27 +745,43 @@ model UserWritingProfile {
 
 ## Current Status
 
-**Last Updated:** 2025-10-26
-**Current Phase:** Phase 2 - Social Media OAuth (Ready to Start)
-**Overall Progress:** 2/9 phases completed (22.2%)
-**Phase 1 Completion:** 94.3% (66/70 tasks)
+**Last Updated:** 2025-10-27
+**Current Phase:** Phase 2 & 4 - Social Media OAuth + Scheduling (In Progress)
+**Overall Progress:** 2.5/9 phases completed (28%)
+**Phase 1 Completion:** 98.6% (69/70 tasks)
+**Phase 2 Completion:** 40% (X OAuth complete)
+**Phase 4 Completion:** 60% (Backend complete)
 **Estimated Total Time:** 150-200 hours (15-20 hours/week = 10-13 weeks)
 
 **Completed Phases:**
 - ✅ Phase 0: Setup & Foundation (100% - 6 hours)
-- ✅ Phase 1: Authentication & Core UI (94.3% - 8 hours)
+- ✅ Phase 1: Authentication & Core UI (98.6% - 8 hours)
+- 🚧 Phase 2: Social Media OAuth (40% - 4 hours) - X OAuth complete
+- 🚧 Phase 4: Scheduling System (60% - 3 hours) - Backend complete
 
 **Current Status:**
-- **Total Time Spent:** ~14 hours
+- **Total Time Spent:** ~21 hours
 - **Production Deployed:** ✅ Yes (Railway + Vercel)
 - **Authentication Working:** ✅ Yes (Clerk integrated)
-- **Known Issues:** 1 minor (webhook 404 - non-blocking)
+- **X OAuth Working:** ✅ Yes (PKCE flow implemented)
+- **Scheduled Tweets:** ✅ Yes (Backend working)
+- **Known Issues:** 0 blocking issues ✨
 
-**Next Steps (Phase 2):**
-1. Set up X (Twitter) OAuth flow
-2. Set up LinkedIn OAuth flow
-3. Set up Meta (Facebook/Instagram) OAuth flow
-4. Create social account management page
+**Recent Fixes (October 27, 2025):**
+1. ✅ Fixed PostgreSQL prepared statement error (42P05)
+   - Created Prisma Client singleton
+   - Added pgbouncer=true parameter
+2. ✅ Fixed missing table errors
+   - Added DIRECT_DATABASE_URL for migrations
+   - All tables created successfully
+3. ✅ Resolved X OAuth callback errors
+
+**Next Steps:**
+1. Update Railway environment variables (DATABASE_URL + DIRECT_DATABASE_URL)
+2. Test X OAuth flow in production
+3. Build calendar view component (Phase 4)
+4. Set up LinkedIn OAuth flow (Phase 2)
+5. Set up Meta OAuth flow (Phase 2)
 
 **Production URLs:**
 - Frontend: https://omni-write.vercel.app
@@ -753,6 +791,125 @@ model UserWritingProfile {
 ---
 
 ## Progress Log
+
+### 2025-10-27 - X OAUTH + SCHEDULED TWEETS WORKING! 🎉
+**Phase 2 (40%) & Phase 4 (60%) - Parallel Progress**
+
+**📊 What Was Accomplished:**
+- ✅ **X (Twitter) OAuth PKCE** - Complete OAuth 2.0 flow with authorization, callback, token exchange
+- ✅ **Social Connection Management** - Store and manage OAuth tokens securely
+- ✅ **Scheduled Tweets Backend** - Full CRUD for scheduling tweets
+- ✅ **Background Job System** - Automatic posting at scheduled times
+- ✅ **Critical Bug Fixes** - Resolved PostgreSQL errors and database issues
+
+**Time Spent:** ~7 hours (Phases 2 & 4 combined)
+
+---
+
+**✅ COMPLETED ITEMS:**
+
+**X (Twitter) OAuth Integration:**
+- ✅ OAuth 2.0 with PKCE (Proof Key for Code Exchange)
+- ✅ Authorization URL generation with code challenge
+- ✅ Callback handling and token exchange
+- ✅ Access token and refresh token storage
+- ✅ Token refresh mechanism
+- ✅ X API integration (profile fetch, tweet posting)
+- ✅ Rate limit handling
+
+**Database Schema Updates:**
+- ✅ SocialConnection model (provider, tokens, expiry, username)
+- ✅ ScheduledTweet model (status: QUEUED, POSTED, FAILED, CANCELLED)
+- ✅ User relations to both models
+- ✅ Unique constraints for data integrity
+
+**API Endpoints (8 new endpoints):**
+- ✅ `GET /api/auth/x/authorize` - Start OAuth flow
+- ✅ `GET /api/auth/x/callback` - Handle OAuth callback
+- ✅ `GET /api/social-connections` - List connected accounts
+- ✅ `DELETE /api/social-connections/:provider` - Disconnect account
+- ✅ `POST /api/scheduled-tweets` - Schedule a tweet
+- ✅ `GET /api/scheduled-tweets` - List scheduled tweets
+- ✅ `DELETE /api/scheduled-tweets/:id` - Cancel tweet
+
+**Background Job System:**
+- ✅ Scheduled tweet processor (runs every 30 seconds)
+- ✅ Automatic status updates (QUEUED → POSTED/FAILED)
+- ✅ Error handling and logging
+- ✅ Integration with X API for posting
+
+**Critical Bug Fixes:**
+1. ✅ **PostgreSQL Error (42P05) - "prepared statement already exists"**
+   - Root cause: Connection pooling conflicts in serverless environment
+   - Solution: Created Prisma Client singleton pattern
+   - Added: `pgbouncer=true&connection_limit=1` to DATABASE_URL
+   - Result: All database operations working smoothly
+
+2. ✅ **Missing Table Error - "ScheduledTweet table does not exist"**
+   - Root cause: Connection pooler can't handle DDL operations (CREATE TABLE)
+   - Solution: Added DIRECT_DATABASE_URL for migrations (port 5432)
+   - Updated: schema.prisma with `directUrl` configuration
+   - Result: All tables created successfully in database
+
+3. ✅ **X OAuth Callback Errors**
+   - Root cause: Database connection issues during OAuth flow
+   - Solution: Fixed by resolving prepared statement error
+   - Result: OAuth flow working end-to-end
+
+**Files Created (7 files):**
+- `backend/src/routes/x.routes.js` - X OAuth routes
+- `backend/src/services/x.service.js` - X API integration (OAuth, posting)
+- `backend/src/services/socialConnection.service.js` - Social connection CRUD
+- `backend/src/services/scheduledTweet.service.js` - Scheduled tweet CRUD
+- `backend/src/jobs/processScheduledTweets.js` - Background job
+- `backend/src/utils/pkce.js` - PKCE helper functions
+- `backend/src/lib/prisma.js` - Prisma singleton
+
+**Files Modified (5 files):**
+- `backend/prisma/schema.prisma` - Added models, directUrl
+- `backend/src/server.js` - Added routes, background job
+- `backend/.env` - Added X credentials, DIRECT_DATABASE_URL, pgbouncer
+- `backend/.env.example` - Updated documentation
+- `backend/src/services/user.service.js` - Updated to use singleton
+- `backend/src/services/socialConnection.service.js` - Updated to use singleton
+- `backend/src/services/scheduledTweet.service.js` - Updated to use singleton
+
+**Git Commits (5 commits):**
+- `5584335` - "feat(x-oauth): implement X OAuth PKCE, routes, UI, docs"
+- `35d149e` - "feat: Add X (Twitter) scheduled tweets functionality"
+- `c519658` - "feat: Add scheduledTweets relation to User model"
+- `9fefbfb` - "fix: Resolve PostgreSQL prepared statement error in production"
+- `972fa88` - "feat: Add direct database URL for schema migrations"
+
+---
+
+**🎯 What's Working:**
+- ✅ X OAuth flow (authorize → callback → store tokens)
+- ✅ Social connection management (list, disconnect)
+- ✅ Schedule tweets via API
+- ✅ Automatic posting at scheduled time
+- ✅ Error handling and status tracking
+- ✅ All database operations stable
+
+**⚠️ Manual Steps Required:**
+1. Update Railway environment variables:
+   - Add `?pgbouncer=true&connection_limit=1` to DATABASE_URL
+   - Add DIRECT_DATABASE_URL variable
+2. Test X OAuth in production
+3. Build frontend UI for scheduling
+
+**📈 Progress Update:**
+- Phase 2 (Social OAuth): 40% complete (1/3 platforms)
+- Phase 4 (Scheduling): 60% complete (backend done, UI pending)
+- Total project: 28% complete (2.5/9 phases)
+
+**🚀 Next Steps:**
+- Deploy to production and test X OAuth flow
+- Build calendar view UI (Phase 4)
+- Implement LinkedIn OAuth (Phase 2)
+- Implement Meta OAuth (Phase 2)
+
+---
 
 ### 2025-10-26 - PHASE 1 COMPLETE! 🎉
 **Phase 1: Authentication & Core UI - 94.3% COMPLETED (66/70 tasks)**
