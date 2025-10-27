@@ -1,7 +1,41 @@
 import { useUser, useAuth } from '@clerk/clerk-react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
+const formatDate = (value, options) => {
+  if (!value) {
+    return 'Not set'
+  }
+
+  try {
+    return new Date(value).toLocaleString(undefined, options)
+  } catch {
+    return 'Not set'
+  }
+}
+
+const formatDateOnly = (value) =>
+  formatDate(value, { dateStyle: 'medium' })
+
+const formatDateTime = (value) =>
+  formatDate(value, { dateStyle: 'medium', timeStyle: 'short' })
+
+const statusStyles = {
+  QUEUED: 'bg-sky-100 text-sky-700',
+  CANCELLED: 'bg-slate-100 text-slate-600',
+  FAILED: 'bg-rose-100 text-rose-700',
+  SENT: 'bg-emerald-100 text-emerald-700',
+  POSTED: 'bg-emerald-100 text-emerald-700',
+}
+
+const statusLabels = {
+  QUEUED: 'Queued',
+  CANCELLED: 'Cancelled',
+  FAILED: 'Failed',
+  SENT: 'Sent',
+  POSTED: 'Posted',
+}
 
 function ProfilePage() {
   const { user, isLoaded } = useUser()
@@ -42,7 +76,7 @@ function ProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [user, getToken])
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -63,7 +97,8 @@ function ProfilePage() {
       } else {
         setXConnection(null)
       }
-    } catch (e) {
+    } catch (err) {
+      console.error('Failed to fetch X connection', err)
       setXConnection(null)
     }
   }, [getToken])
@@ -93,7 +128,7 @@ function ProfilePage() {
       url.searchParams.delete('message')
       window.history.replaceState({}, '', url.toString())
     }
-  }, [])
+  }, [fetchXConnection])
 
   const connectTwitter = useCallback(async () => {
     try {
@@ -119,7 +154,7 @@ function ProfilePage() {
       console.error('Connect Twitter failed:', e)
       setBanner({ type: 'error', message: e.message || 'Unable to start Twitter OAuth.' })
     }
-  }, [user])
+  }, [getToken])
 
   const disconnectTwitter = useCallback(async () => {
     try {
@@ -145,6 +180,79 @@ function ProfilePage() {
   const [scheduleAt, setScheduleAt] = useState('')
   const [scheduled, setScheduled] = useState([])
 
+  const displayName = useMemo(() => {
+    if (!user) {
+      return ''
+    }
+
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
+    return fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Your profile'
+  }, [user])
+
+  const truncatedUserId = useMemo(() => {
+    if (!user?.id) {
+      return ''
+    }
+
+    if (user.id.length <= 12) {
+      return user.id
+    }
+
+    return `${user.id.slice(0, 6)}…${user.id.slice(-4)}`
+  }, [user])
+
+  const accountDetails = useMemo(() => {
+    if (!user) {
+      return []
+    }
+
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Not set'
+
+    return [
+      { label: 'Name', value: fullName },
+      { label: 'Email', value: user.primaryEmailAddress?.emailAddress || 'Not set' },
+      { label: 'Username', value: user.username || 'Not set' },
+      { label: 'User ID', value: user.id, isMono: true },
+      { label: 'Joined', value: formatDateOnly(user.createdAt) },
+    ]
+  }, [user])
+
+  const databaseDetails = useMemo(() => {
+    if (!dbUser) {
+      return []
+    }
+
+    return [
+      { label: 'Database ID', value: dbUser.id, isMono: true },
+      { label: 'Clerk ID', value: dbUser.clerkId, isMono: true },
+      { label: 'Email', value: dbUser.email },
+      { label: 'Name', value: dbUser.name || 'Not set' },
+      { label: 'Created', value: formatDateTime(dbUser.createdAt) },
+      { label: 'Updated', value: formatDateTime(dbUser.updatedAt) },
+    ]
+  }, [dbUser])
+
+  const queuedCount = useMemo(
+    () => scheduled.filter((item) => item.status === 'QUEUED').length,
+    [scheduled]
+  )
+
+  const heroStats = useMemo(
+    () => [
+      { label: 'Member Since', value: formatDateOnly(user?.createdAt) },
+      { label: 'Queued Tweets', value: queuedCount.toString() },
+      {
+        label: 'Last Sync',
+        value: dbUser?.updatedAt ? formatDateTime(dbUser.updatedAt) : 'Awaiting sync',
+      },
+    ],
+    [user, queuedCount, dbUser]
+  )
+
+  const connectionHandle = xConnection
+    ? xConnection.username || xConnection.providerUserId
+    : ''
+
   const loadScheduled = useCallback(async () => {
     try {
       const token = await getToken()
@@ -156,7 +264,9 @@ function ProfilePage() {
         const data = await resp.json()
         setScheduled(data.scheduled || [])
       }
-    } catch {}
+    } catch (err) {
+      console.error('Failed to load scheduled tweets', err)
+    }
   }, [getToken])
 
   useEffect(() => {
@@ -205,168 +315,298 @@ function ProfilePage() {
       if (resp.ok) {
         loadScheduled()
       }
-    } catch {}
+    } catch (err) {
+      console.error('Failed to cancel scheduled tweet', err)
+    }
   }, [getToken, loadScheduled])
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading profile...</div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-500" aria-hidden />
+          <p className="text-sm font-medium text-indigo-700">We&apos;re getting your profile ready…</p>
+        </div>
       </div>
     )
   }
 
-  return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Your Profile</h1>
+  const bannerClasses =
+    banner?.type === 'success'
+      ? 'border-emerald-200 bg-emerald-50/80 text-emerald-700'
+      : 'border-rose-200 bg-rose-50/80 text-rose-700'
 
+  return (
+    <main className="px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-5xl flex-col gap-10">
         {banner && (
-          <div className={`mb-6 rounded-lg p-4 border ${banner.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+          <div className={`rounded-3xl border px-5 py-4 text-sm font-medium shadow-sm ${bannerClasses}`}>
             {banner.message}
           </div>
         )}
 
-        {/* Clerk User Data */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Account Information</h2>
-          <div className="bg-gray-50 rounded-lg p-6 space-y-3">
-            <div className="flex items-start">
-              <span className="font-medium text-gray-700 w-32">Name:</span>
-              <span className="text-gray-900">
-                {user.firstName} {user.lastName || ''}
-              </span>
-            </div>
-            <div className="flex items-start">
-              <span className="font-medium text-gray-700 w-32">Email:</span>
-              <span className="text-gray-900">{user.primaryEmailAddress?.emailAddress}</span>
-            </div>
-            <div className="flex items-start">
-              <span className="font-medium text-gray-700 w-32">Username:</span>
-              <span className="text-gray-900">{user.username || 'Not set'}</span>
-            </div>
-            <div className="flex items-start">
-              <span className="font-medium text-gray-700 w-32">User ID:</span>
-              <span className="text-gray-600 text-sm font-mono">{user.id}</span>
-            </div>
-            <div className="flex items-start">
-              <span className="font-medium text-gray-700 w-32">Joined:</span>
-              <span className="text-gray-900">{new Date(user.createdAt).toLocaleDateString()}</span>
+        <section className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-sky-500 opacity-90" />
+          <div className="absolute -top-24 -left-16 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute -bottom-24 -right-12 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative z-10 p-8 sm:p-10">
+            <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-6">
+                {user?.profileImageUrl ? (
+                  <img
+                    src={user.profileImageUrl}
+                    alt={`${displayName}'s profile`}
+                    className="h-20 w-20 rounded-3xl border-2 border-white/70 shadow-lg"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-white/40 bg-white/10 text-2xl font-semibold uppercase tracking-wide">
+                    {displayName.charAt(0)}
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.4em] text-white/60">Profile</p>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+                    {displayName}
+                  </h1>
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/80">
+                    {user?.primaryEmailAddress?.emailAddress && (
+                      <span>{user.primaryEmailAddress.emailAddress}</span>
+                    )}
+                    {truncatedUserId && (
+                      <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.23em] text-white/80 backdrop-blur">
+                        <span>ID</span>
+                        <code title={user.id} className="font-mono text-white">
+                          {truncatedUserId}
+                        </code>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid w-full gap-4 sm:w-auto sm:grid-cols-3">
+                {heroStats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-2xl bg-white/15 px-4 py-3 text-left backdrop-blur-sm"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+                      {stat.label}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-white">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Database User Data */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Database Profile</h2>
-          {error ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-              {error}
-            </div>
-          ) : dbUser ? (
-            <div className="bg-indigo-50 rounded-lg p-6 space-y-3">
-              <div className="flex items-start">
-                <span className="font-medium text-indigo-900 w-32">DB ID:</span>
-                <span className="text-indigo-800 text-sm font-mono">{dbUser.id}</span>
-              </div>
-              <div className="flex items-start">
-                <span className="font-medium text-indigo-900 w-32">Clerk ID:</span>
-                <span className="text-indigo-800 text-sm font-mono">{dbUser.clerkId}</span>
-              </div>
-              <div className="flex items-start">
-                <span className="font-medium text-indigo-900 w-32">Email:</span>
-                <span className="text-indigo-800">{dbUser.email}</span>
-              </div>
-              <div className="flex items-start">
-                <span className="font-medium text-indigo-900 w-32">Name:</span>
-                <span className="text-indigo-800">{dbUser.name || 'Not set'}</span>
-              </div>
-              <div className="flex items-start">
-                <span className="font-medium text-indigo-900 w-32">Created:</span>
-                <span className="text-indigo-800">{new Date(dbUser.createdAt).toLocaleString()}</span>
-              </div>
-              <div className="flex items-start">
-                <span className="font-medium text-indigo-900 w-32">Updated:</span>
-                <span className="text-indigo-800">{new Date(dbUser.updatedAt).toLocaleString()}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700">
-              Profile not synced to database yet. This may take a moment after signup.
-            </div>
-          )}
-        </div>
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
+            <header>
+              <h2 className="text-lg font-semibold text-slate-900">Account Information</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Live details synced from your Clerk profile.
+              </p>
+            </header>
+            <dl className="mt-6 space-y-5">
+              {accountDetails.map(({ label, value, isMono }) => {
+                const display = value ?? 'Not set'
+                const isPlaceholder = display === 'Not set' || display === ''
+                const valueClass = [
+                  'text-sm leading-6',
+                  isMono ? 'font-mono text-[13px] text-slate-700' : 'font-medium text-slate-900',
+                  isPlaceholder ? 'font-normal italic text-slate-400' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')
 
-        {/* Actions */}
-        <div className="pt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-500 mb-4">
-            To update your profile information, click your profile picture in the top right corner.
-          </p>
-          {xConnection ? (
-            <div className="flex items-center gap-3">
-              <span className="text-gray-700">Connected as <span className="font-medium">@{xConnection.username || xConnection.providerUserId}</span></span>
+                return (
+                  <div
+                    key={label}
+                    className="grid grid-cols-[minmax(130px,auto)_1fr] items-start gap-x-4 gap-y-1"
+                  >
+                    <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                      {label}
+                    </dt>
+                    <dd className={valueClass}>{display || '—'}</dd>
+                  </div>
+                )
+              })}
+            </dl>
+          </div>
+
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
+            <header>
+              <h2 className="text-lg font-semibold text-slate-900">Database Profile</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Your Omni Write record stored in our database.
+              </p>
+            </header>
+            {error ? (
+              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
+                {error}
+              </div>
+            ) : databaseDetails.length ? (
+              <dl className="mt-6 space-y-5">
+                {databaseDetails.map(({ label, value, isMono }) => {
+                  const display = value ?? 'Not set'
+                  const isPlaceholder = display === 'Not set' || display === ''
+                  const valueClass = [
+                    'text-sm leading-6',
+                    isMono ? 'font-mono text-[13px] text-slate-700' : 'font-medium text-slate-900',
+                    isPlaceholder ? 'font-normal italic text-slate-400' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+
+                  return (
+                    <div
+                      key={label}
+                      className="grid grid-cols-[minmax(130px,auto)_1fr] items-start gap-x-4 gap-y-1"
+                    >
+                      <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                        {label}
+                      </dt>
+                      <dd className={valueClass}>{display || '—'}</dd>
+                    </div>
+                  )
+                })}
+              </dl>
+            ) : (
+              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-sm leading-6 text-slate-500">
+                Profile not synced to the database yet. This usually resolves a few moments after
+                signup.
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">X (Twitter) connection</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Connect your account to queue posts directly from Omni Write.
+              </p>
+            </div>
+            {xConnection ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                  @{connectionHandle}
+                </span>
+                <button
+                  type="button"
+                  onClick={disconnectTwitter}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
-                onClick={disconnectTwitter}
-                className="inline-flex items-center px-3 py-1.5 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                onClick={connectTwitter}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2"
               >
-                Disconnect
+                Connect account
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={connectTwitter}
-              className="inline-flex items-center px-4 py-2 rounded-md bg-black text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800"
-            >
-              Connect Twitter
-            </button>
-          )}
+            )}
+          </div>
+
+          <p className="mt-4 text-xs uppercase tracking-[0.3em] text-slate-400">
+            To edit profile details, use the menu in the top-right corner.
+          </p>
 
           {xConnection && (
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold mb-3">Compose tweet</h3>
-              <form onSubmit={submitSchedule} className="space-y-3">
+            <div className="mt-8 grid gap-8 lg:grid-cols-2">
+              <form onSubmit={submitSchedule} className="flex flex-col gap-4">
+                <div>
+                  <h4 className="text-base font-semibold text-slate-900">Compose tweet</h4>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Draft a post and choose when it should go live.
+                  </p>
+                </div>
                 <textarea
                   value={composeText}
                   onChange={(e) => setComposeText(e.target.value)}
-                  rows={4}
-                  className="w-full border rounded-md p-3"
-                  placeholder="What's happening?"
+                  rows={6}
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  placeholder="What would you like to share?"
                 />
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <input
                     type="datetime-local"
                     value={scheduleAt}
                     onChange={(e) => setScheduleAt(e.target.value)}
-                    className="border rounded-md p-2"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
                   />
                   <button
                     type="submit"
-                    className="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                    className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
+                    disabled={!composeText || !scheduleAt}
                   >
-                    Schedule
+                    Schedule tweet
                   </button>
                 </div>
               </form>
 
-              <h4 className="text-md font-semibold mt-6 mb-2">Scheduled</h4>
-              <ul className="space-y-2">
-                {scheduled.map((s) => (
-                  <li key={s.id} className="border rounded-md p-3 flex items-center justify-between">
-                    <div>
-                      <div className="text-gray-900">{s.text}</div>
-                      <div className="text-sm text-gray-500">{new Date(s.scheduledAt).toLocaleString()} • {s.status}</div>
-                    </div>
-                    {s.status === 'QUEUED' && (
-                      <button onClick={() => cancelScheduled(s.id)} className="px-3 py-1.5 rounded-md border">Cancel</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h4 className="text-base font-semibold text-slate-900">Scheduled tweets</h4>
+                  <p className="mt-1 text-sm text-slate-500">
+                    A quick look at everything queued from Omni Write.
+                  </p>
+                </div>
+                {scheduled.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-6 text-center text-sm text-slate-500">
+                    Nothing scheduled yet. Your upcoming posts will appear here.
+                  </div>
+                ) : (
+                  <ul className="space-y-4">
+                    {scheduled.map((s) => {
+                      const badgeClass = statusStyles[s.status] || 'bg-slate-100 text-slate-600'
+                      const badgeLabel = statusLabels[s.status] || s.status
+
+                      return (
+                        <li
+                          key={s.id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
+                        >
+                          <div className="flex flex-col gap-3">
+                            <p className="text-sm font-medium leading-relaxed text-slate-900">
+                              {s.text || <span className="italic text-slate-400">No content</span>}
+                            </p>
+                            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                              <span>{formatDateTime(s.scheduledAt)}</span>
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${badgeClass}`}
+                                >
+                                  {badgeLabel}
+                                </span>
+                                {s.status === 'QUEUED' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => cancelScheduled(s.id)}
+                                    className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </main>
   )
