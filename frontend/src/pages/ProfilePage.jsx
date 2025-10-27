@@ -169,7 +169,11 @@ function ProfilePage() {
     e.preventDefault()
     try {
       const token = await getToken()
-      const body = { text: composeText, scheduledAt: scheduleAt }
+      // Convert datetime-local (no timezone) to ISO string with user's timezone
+      const localDate = new Date(scheduleAt)
+      const isoWithTimezone = localDate.toISOString()
+
+      const body = { text: composeText, scheduledAt: isoWithTimezone }
       const resp = await fetch(`${API_BASE_URL}/api/x/tweet/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
