@@ -219,6 +219,23 @@ router.post('/x/tweet', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/x/tweet/:id - delete a tweet by id
+router.delete('/x/tweet/:id', requireAuth, async (req, res) => {
+  try {
+    const tweetId = req.params.id;
+    if (!tweetId) return res.status(400).json({ error: 'MissingTweetId' });
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const connection = await getConnectionByUserId(dbUser.id, PROVIDERS.X);
+    if (!connection) return res.status(404).json({ error: 'XConnectionNotFound' });
+    const result = await xService.deleteTweet(connection.accessToken, tweetId);
+    return res.status(200).json(result);
+  } catch (e) {
+    console.error('X delete tweet error:', e);
+    return res.status(500).json({ error: 'XDeleteFailed', message: e.message });
+  }
+});
+
 // POST /api/x/tweet/schedule - schedule a tweet
 router.post('/x/tweet/schedule', requireAuth, async (req, res) => {
   try {

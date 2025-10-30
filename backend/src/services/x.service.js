@@ -10,7 +10,7 @@ function getConfig() {
     X_CLIENT_ID: clientId,
     X_CLIENT_SECRET: clientSecret,
     X_REDIRECT_URI: redirectUri,
-    X_DEFAULT_SCOPES: scope = 'tweet.read users.read offline.access',
+    X_DEFAULT_SCOPES: scope = 'tweet.read tweet.write users.read offline.access',
   } = process.env;
 
   if (!clientId || !clientSecret || !redirectUri) {
@@ -120,6 +120,23 @@ async function postTweet(accessToken, text) {
   return response.data;
 }
 
+async function deleteTweet(accessToken, tweetId) {
+  const url = `${X_API_BASE}/tweets/${encodeURIComponent(tweetId)}`;
+  const response = await axios.delete(url, {
+    headers: { ...authHeaders(accessToken) },
+    validateStatus: () => true,
+  });
+  if (response.status === 429) {
+    const limit = response.headers['x-rate-limit-limit'];
+    const reset = response.headers['x-rate-limit-reset'];
+    throw new Error(`Rate limited by X API (limit=${limit}, reset=${reset})`);
+  }
+  if (response.status !== 200) {
+    throw new Error(`X DELETE /tweets/:id failed: ${response.status}`);
+  }
+  return response.data;
+}
+
 module.exports = {
   getConfig,
   buildAuthorizationUrl,
@@ -127,6 +144,7 @@ module.exports = {
   refreshAccessToken,
   getMe,
   postTweet,
+  deleteTweet,
   generateCodeVerifier,
   generateCodeChallenge,
 };
