@@ -22,6 +22,7 @@ model User {
 
   socialConnections SocialConnection[]
   scheduledTweets   ScheduledTweet[]
+  scheduledThreads  ScheduledThread[]
 }
 
 model SocialConnection {
@@ -61,4 +62,26 @@ model ScheduledTweet {
   errorMessage String?               @db.Text
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
+}
+
+enum ScheduledThreadStatus {
+  QUEUED
+  POSTED
+  FAILED
+  CANCELLED
+}
+
+model ScheduledThread {
+  id           String                 @id @default(cuid())
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  provider     String                 @default("X")
+  tweets       String[]               // Array of tweet texts in the thread
+  scheduledAt  DateTime
+  status       ScheduledThreadStatus  @default(QUEUED)
+  postedThreadId String?              // First tweet ID (represents the thread)
+  postedTweetIds String[]             // All posted tweet IDs
+  errorMessage String?                @db.Text
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
 }

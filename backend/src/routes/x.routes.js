@@ -4,6 +4,7 @@ const { PROVIDERS, upsertConnection, getConnectionByUserId } = require('../servi
 const xService = require('../services/x.service');
 const { createState, consumeState } = require('../utils/oauthStateStore');
 const scheduledService = require('../services/scheduledTweet.service');
+const scheduledThreadService = require('../services/scheduledThread.service');
 
 const router = express.Router();
 
@@ -219,6 +220,31 @@ router.post('/x/tweet', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/x/thread - post a thread
+router.post('/x/thread', requireAuth, async (req, res) => {
+  try {
+    const { tweets } = req.body || {};
+    if (!Array.isArray(tweets) || tweets.length === 0) {
+      return res.status(400).json({ error: 'MissingTweets', message: 'tweets array is required and must not be empty' });
+    }
+    // Validate that all tweets are strings
+    for (let i = 0; i < tweets.length; i++) {
+      if (typeof tweets[i] !== 'string' || !tweets[i].trim()) {
+        return res.status(400).json({ error: 'InvalidTweet', message: `Tweet at index ${i} must be a non-empty string` });
+      }
+    }
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const connection = await getConnectionByUserId(dbUser.id, PROVIDERS.X);
+    if (!connection) return res.status(404).json({ error: 'XConnectionNotFound' });
+    const result = await xService.postThread(connection.accessToken, tweets);
+    return res.status(201).json(result);
+  } catch (e) {
+    console.error('X post thread error:', e);
+    return res.status(500).json({ error: 'XThreadPostFailed', message: e.message });
+  }
+});
+
 // DELETE /api/x/tweet/:id - delete a tweet by id
 router.delete('/x/tweet/:id', requireAuth, async (req, res) => {
   try {
@@ -277,6 +303,58 @@ router.delete('/x/tweet/schedule/:id', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('X cancel scheduled error:', e);
     return res.status(500).json({ error: 'XCancelScheduledFailed', message: e.message });
+  }
+});
+
+// POST /api/x/thread/schedule - schedule a thread
+router.post('/x/thread/schedule', requireAuth, async (req, res) => {
+  try {
+    const { tweets, scheduledAt } = req.body || {};
+    if (!Array.isArray(tweets) || tweets.length === 0) {
+      return res.status(400).json({ error: 'MissingTweets', message: 'tweets array is required and must not be empty' });
+    }
+    // Validate that all tweets are strings
+    for (let i = 0; i < tweets.length; i++) {
+      if (typeof tweets[i] !== 'string' || !tweets[i].trim()) {
+        return res.status(400).json({ error: 'InvalidTweet', message: `Tweet at index ${i} must be a non-empty string` });
+      }
+    }
+    if (!scheduledAt) return res.status(400).json({ error: 'MissingScheduledAt' });
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const st = await scheduledThreadService.createScheduledThread(dbUser.id, tweets, scheduledAt);
+    return res.status(201).json({ scheduled: st });
+  } catch (e) {
+    console.error('X schedule thread error:', e);
+    return res.status(500).json({ error: 'XScheduleThreadFailed', message: e.message });
+  }
+});
+
+// GET /api/x/thread/schedule - list scheduled threads for current user
+router.get('/x/thread/schedule', requireAuth, async (req, res) => {
+  try {
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const items = await scheduledThreadService.listScheduledThreadsForUser(dbUser.id, 50);
+    return res.status(200).json({ scheduled: items });
+  } catch (e) {
+    console.error('X list scheduled threads error:', e);
+    return res.status(500).json({ error: 'XListScheduledThreadsFailed', message: e.message });
+  }
+});
+
+// DELETE /api/x/thread/schedule/:id - cancel scheduled thread
+router.delete('/x/thread/schedule/:id', requireAuth, async (req, res) => {
+  try {
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+    const id = req.params.id;
+    const result = await scheduledThreadService.cancelScheduledThread(dbUser.id, id);
+    if (result.count === 0) return res.status(404).json({ error: 'NotFound' });
+    return res.status(200).json({ status: 'ok' });
+  } catch (e) {
+    console.error('X cancel scheduled thread error:', e);
+    return res.status(500).json({ error: 'XCancelScheduledThreadFailed', message: e.message });
   }
 });
 

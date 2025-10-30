@@ -137,6 +137,62 @@ async function deleteTweet(accessToken, tweetId) {
   return response.data;
 }
 
+async function postThread(accessToken, tweets) {
+  if (!Array.isArray(tweets) || tweets.length === 0) {
+    throw new Error('Tweets array is required and must not be empty');
+  }
+
+  const postedTweets = [];
+  let previousTweetId = null;
+
+  for (let i = 0; i < tweets.length; i++) {
+    const text = tweets[i];
+
+    // Build request body
+    const body = { text };
+
+    // For tweets after the first one, add reply information
+    if (previousTweetId) {
+      body.reply = {
+        in_reply_to_tweet_id: previousTweetId
+      };
+    }
+
+    const url = `${X_API_BASE}/tweets`;
+    const response = await axios.post(url, body, {
+      headers: { ...authHeaders(accessToken), 'Content-Type': 'application/json' },
+      validateStatus: () => true,
+    });
+
+    if (response.status === 429) {
+      const limit = response.headers['x-rate-limit-limit'];
+      const reset = response.headers['x-rate-limit-reset'];
+      throw new Error(`Rate limited by X API at tweet ${i + 1} (limit=${limit}, reset=${reset})`);
+    }
+
+    if (response.status !== 201) {
+      throw new Error(`X /tweets failed at tweet ${i + 1}: ${response.status}`);
+    }
+
+    const tweetData = response.data;
+    postedTweets.push(tweetData);
+
+    // Set the previous tweet ID for the next iteration
+    if (tweetData && tweetData.data && tweetData.data.id) {
+      previousTweetId = tweetData.data.id;
+    } else {
+      throw new Error(`Failed to get tweet ID from response at tweet ${i + 1}`);
+    }
+  }
+
+  return {
+    success: true,
+    tweets: postedTweets,
+    threadId: postedTweets[0]?.data?.id, // First tweet ID represents the thread
+    count: postedTweets.length
+  };
+}
+
 module.exports = {
   getConfig,
   buildAuthorizationUrl,
@@ -144,6 +200,7 @@ module.exports = {
   refreshAccessToken,
   getMe,
   postTweet,
+  postThread,
   deleteTweet,
   generateCodeVerifier,
   generateCodeChallenge,
