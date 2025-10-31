@@ -22,11 +22,11 @@ const formatDateTime = (value) =>
   formatDate(value, { dateStyle: 'medium', timeStyle: 'short' })
 
 const statusStyles = {
-  QUEUED: 'bg-sky-100 text-sky-700',
-  CANCELLED: 'bg-slate-100 text-slate-600',
-  FAILED: 'bg-rose-100 text-rose-700',
-  SENT: 'bg-emerald-100 text-emerald-700',
-  POSTED: 'bg-emerald-100 text-emerald-700',
+  QUEUED: 'bg-sky-400/15 text-sky-200 ring-1 ring-inset ring-sky-400/40',
+  CANCELLED: 'bg-slate-400/10 text-slate-300 ring-1 ring-inset ring-slate-400/40',
+  FAILED: 'bg-rose-400/15 text-rose-200 ring-1 ring-inset ring-rose-400/40',
+  SENT: 'bg-emerald-400/15 text-emerald-200 ring-1 ring-inset ring-emerald-400/40',
+  POSTED: 'bg-emerald-400/15 text-emerald-200 ring-1 ring-inset ring-emerald-400/40',
 }
 
 const statusLabels = {
@@ -191,6 +191,11 @@ function ProfilePage() {
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
     return fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Your profile'
   }, [user])
+
+  const avatarInitial = useMemo(() => {
+    const source = displayName || user?.primaryEmailAddress?.emailAddress || ''
+    return source ? source.charAt(0).toUpperCase() : '?'
+  }, [displayName, user])
 
   const truncatedUserId = useMemo(() => {
     if (!user?.id) {
@@ -423,142 +428,124 @@ function ProfilePage() {
     )
   }
 
+
   const bannerClasses =
     banner?.type === 'success'
-      ? 'border-emerald-200 bg-emerald-50/80 text-emerald-700'
-      : 'border-rose-200 bg-rose-50/80 text-rose-700'
+      ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-100'
+      : 'border-rose-400/60 bg-rose-400/10 text-rose-100'
 
   return (
-    <main className="px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10">
+    <main className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-32 top-12 h-72 w-72 rounded-full bg-indigo-500/40 blur-3xl" />
+        <div className="absolute right-[-10%] top-[-18%] h-80 w-80 rounded-full bg-purple-500/35 blur-[140px]" />
+        <div className="absolute bottom-[-30%] left-1/3 h-96 w-96 rounded-full bg-sky-500/30 blur-[160px]" />
+      </div>
+      <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-12">
         {banner && (
-          <div className={`rounded-3xl border px-5 py-4 text-sm font-medium shadow-sm ${bannerClasses}`}>
-            {banner.message}
+          <div
+            className={`mb-10 flex items-start gap-3 rounded-3xl border px-6 py-4 text-sm shadow-2xl backdrop-blur ${bannerClasses}`}
+          >
+            <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/30 text-[10px] font-semibold uppercase tracking-[0.3em]">
+              {banner.type === 'success' ? 'OK' : 'ERR'}
+            </span>
+            <p className="flex-1 text-sm font-medium tracking-tight">{banner.message}</p>
           </div>
         )}
 
-        <section className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-sky-500 opacity-90" />
-          <div className="absolute -top-24 -left-16 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
-          <div className="absolute -bottom-24 -right-12 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative z-10 p-8 sm:p-10">
-            <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-6">
-                {user?.profileImageUrl ? (
-                  <img
-                    src={user.profileImageUrl}
-                    alt={`${displayName}'s profile`}
-                    className="h-20 w-20 rounded-3xl border-2 border-white/70 shadow-lg"
-                  />
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-white/40 bg-white/10 text-2xl font-semibold uppercase tracking-wide">
-                    {displayName.charAt(0)}
-                  </div>
-                )}
+        {error && (
+          <div className="mb-10 flex items-start gap-3 rounded-3xl border border-rose-400/60 bg-rose-500/10 px-6 py-4 text-sm text-rose-100 shadow-2xl backdrop-blur">
+            <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-300/60 text-[10px] font-semibold uppercase tracking-[0.3em]">
+              ERR
+            </span>
+            <p className="flex-1 text-sm font-medium tracking-tight">{error}</p>
+          </div>
+        )}
 
-                <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-white/60">Profile</p>
-                  <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                    {displayName}
-                  </h1>
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/80">
-                    {user?.primaryEmailAddress?.emailAddress && (
-                      <span>{user.primaryEmailAddress.emailAddress}</span>
+        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/55 to-slate-900/30 shadow-[0_40px_120px_-45px_rgba(15,23,42,0.9)]">
+          <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-indigo-500/40 blur-3xl" />
+          <div className="absolute bottom-[-35%] right-10 h-64 w-64 rounded-full bg-sky-400/25 blur-[140px]" />
+          <div className="relative grid gap-10 p-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-6">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+                <div className="relative shrink-0">
+                  {user?.profileImageUrl ? (
+                    <img
+                      src={user.profileImageUrl}
+                      alt={`${displayName}'s profile`}
+                      className="h-24 w-24 rounded-[28px] border-2 border-white/40 object-cover shadow-xl"
+                    />
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-[28px] border-2 border-white/30 bg-white/10 text-3xl font-semibold uppercase tracking-wide">
+                      {avatarInitial}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/20 bg-slate-950/70 px-4 py-1 text-[11px] font-medium uppercase tracking-[0.35em] text-slate-200">
+                    Profile
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{displayName}</h1>
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300/90">
+                    {user?.primaryEmailAddress?.emailAddress && <span>{user.primaryEmailAddress.emailAddress}</span>}
+                    {user?.username && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-slate-100">
+                        @{user.username}
+                      </span>
                     )}
                     {truncatedUserId && (
-                      <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.23em] text-white/80 backdrop-blur">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-200">
                         <span>ID</span>
-                        <code title={user.id} className="font-mono text-white">
+                        <code title={user.id} className="font-mono text-slate-100">
                           {truncatedUserId}
                         </code>
                       </span>
                     )}
                   </div>
+                  <p className="max-w-xl text-sm text-slate-300/80">
+                    Manage your Omni Write identity, check database sync details, and keep tabs on scheduled content—all from a single, modern workspace.
+                  </p>
                 </div>
               </div>
-
-              <div className="grid w-full gap-4 sm:w-auto sm:grid-cols-3">
-                {heroStats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-2xl bg-white/15 px-4 py-3 text-left backdrop-blur-sm"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-                      {stat.label}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-white">{stat.value}</p>
-                  </div>
-                ))}
-              </div>
             </div>
+            <aside className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+              {heroStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-left shadow-lg backdrop-blur"
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-300/80">
+                    {stat.label}
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-white">{stat.value}</p>
+                </div>
+              ))}
+            </aside>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-            <header>
-              <h2 className="text-lg font-semibold text-slate-900">Account Information</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Live details synced from your Clerk profile.
-              </p>
-            </header>
-            <dl className="mt-6 space-y-5">
-              {accountDetails.map(({ label, value, isMono }) => {
-                const display = value ?? 'Not set'
-                const isPlaceholder = display === 'Not set' || display === ''
-                const valueClass = [
-                  'text-sm leading-6',
-                  isMono ? 'font-mono text-[13px] text-slate-700' : 'font-medium text-slate-900',
-                  isPlaceholder ? 'font-normal italic text-slate-400' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-
-                return (
-                  <div
-                    key={label}
-                    className="grid grid-cols-[minmax(130px,auto)_1fr] items-start gap-x-4 gap-y-1"
-                  >
-                    <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                      {label}
-                    </dt>
-                    <dd className={valueClass}>{display || '—'}</dd>
-                  </div>
-                )
-              })}
-            </dl>
-          </div>
-
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-            <header>
-              <h2 className="text-lg font-semibold text-slate-900">Database Profile</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Your Omni Write record stored in our database.
-              </p>
-            </header>
-            {error ? (
-              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
-                {error}
-              </div>
-            ) : databaseDetails.length ? (
-              <dl className="mt-6 space-y-5">
-                {databaseDetails.map(({ label, value, isMono }) => {
+        <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+          <div className="space-y-10">
+            <article className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl backdrop-blur">
+              <header>
+                <h2 className="text-lg font-semibold text-white">Account snapshot</h2>
+                <p className="mt-2 text-sm text-slate-300/80">Live details synced from your Clerk profile.</p>
+              </header>
+              <dl className="mt-6 divide-y divide-white/5">
+                {accountDetails.map(({ label, value, isMono }) => {
                   const display = value ?? 'Not set'
                   const isPlaceholder = display === 'Not set' || display === ''
                   const valueClass = [
                     'text-sm leading-6',
-                    isMono ? 'font-mono text-[13px] text-slate-700' : 'font-medium text-slate-900',
+                    isMono ? 'font-mono text-[13px] text-slate-200' : 'font-semibold text-slate-50',
                     isPlaceholder ? 'font-normal italic text-slate-400' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')
 
                   return (
-                    <div
-                      key={label}
-                      className="grid grid-cols-[minmax(130px,auto)_1fr] items-start gap-x-4 gap-y-1"
-                    >
-                      <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                    <div key={label} className="grid gap-y-1 gap-x-6 py-4 sm:grid-cols-[160px_1fr]">
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400/80">
                         {label}
                       </dt>
                       <dd className={valueClass}>{display || '—'}</dd>
@@ -566,284 +553,315 @@ function ProfilePage() {
                   )
                 })}
               </dl>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-sm leading-6 text-slate-500">
-                Profile not synced to the database yet. This usually resolves a few moments after
-                signup.
-              </div>
-            )}
-          </div>
-        </section>
+            </article>
 
-        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">X (Twitter) connection</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Connect your account to queue posts directly from Omni Write.
-              </p>
-            </div>
-            {xConnection ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                  @{connectionHandle}
-                </span>
+            <article className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl backdrop-blur">
+              <header>
+                <h2 className="text-lg font-semibold text-white">Database record</h2>
+                <p className="mt-2 text-sm text-slate-300/80">
+                  These values mirror what is stored on the Omni Write servers.
+                </p>
+              </header>
+
+              {dbUser ? (
+                <dl className="mt-6 divide-y divide-white/5">
+                  {databaseDetails.map(({ label, value, isMono }) => {
+                    const display = value ?? 'Not set'
+                    const isPlaceholder = display === 'Not set' || display === ''
+                    const valueClass = [
+                      'text-sm leading-6',
+                      isMono ? 'font-mono text-[13px] text-slate-200' : 'font-semibold text-slate-50',
+                      isPlaceholder ? 'font-normal italic text-slate-400' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')
+
+                    return (
+                      <div key={label} className="grid gap-y-1 gap-x-6 py-4 sm:grid-cols-[160px_1fr]">
+                        <dt className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400/80">
+                          {label}
+                        </dt>
+                        <dd className={valueClass}>{display || '—'}</dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              ) : (
+                <div className="mt-6 rounded-2xl border border-dashed border-white/20 bg-slate-950/40 p-6 text-sm leading-6 text-slate-300/80">
+                  Profile not synced to the database yet. This usually resolves a few moments after signup.
+                </div>
+              )}
+            </article>
+          </div>
+
+          <article className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl backdrop-blur">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-white">X (Twitter) connection</h3>
+                <p className="mt-2 text-sm text-slate-300/80">
+                  Connect your account to queue posts directly from Omni Write.
+                </p>
+              </div>
+              {xConnection ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-slate-950/40 px-4 py-2 text-sm font-semibold text-slate-100">
+                    @{connectionHandle}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={disconnectTwitter}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={disconnectTwitter}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                  onClick={connectTwitter}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:to-sky-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:ring-offset-2 focus:ring-offset-slate-950"
                 >
-                  Disconnect
+                  Connect account
                 </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={connectTwitter}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2"
-              >
-                Connect account
-              </button>
-            )}
-          </div>
+              )}
+            </div>
 
-          <p className="mt-4 text-xs uppercase tracking-[0.3em] text-slate-400">
-            To edit profile details, use the menu in the top-right corner.
-          </p>
+            <p className="mt-4 text-xs uppercase tracking-[0.35em] text-slate-400/80">
+              To edit profile details, use the menu in the top-right corner.
+            </p>
 
-          {xConnection && (
-            <div className="mt-8 grid gap-8 lg:grid-cols-2">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Compose {composeMode === 'tweet' ? 'tweet' : 'thread'}
-                    </h4>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Draft a post and choose when it should go live.
-                    </p>
-                  </div>
-                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setComposeMode('tweet')}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                        composeMode === 'tweet'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Tweet
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setComposeMode('thread')}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                        composeMode === 'thread'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Thread
-                    </button>
-                  </div>
-                </div>
-
-                {composeMode === 'tweet' ? (
-                  <form onSubmit={submitSchedule} className="flex flex-col gap-4">
-                    <textarea
-                      value={composeText}
-                      onChange={(e) => setComposeText(e.target.value)}
-                      rows={6}
-                      className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                      placeholder="What would you like to share?"
-                    />
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                      <input
-                        type="datetime-local"
-                        value={scheduleAt}
-                        onChange={(e) => setScheduleAt(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                      />
+            {xConnection && (
+              <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-base font-semibold text-white">
+                        Compose {composeMode === 'tweet' ? 'tweet' : 'thread'}
+                      </h4>
+                      <p className="mt-1 text-sm text-slate-300/80">
+                        Draft a post and choose when it should go live.
+                      </p>
+                    </div>
+                    <div className="inline-flex rounded-full border border-white/10 bg-slate-950/40 p-1 shadow-inner">
                       <button
-                        type="submit"
-                        className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
-                        disabled={!composeText || !scheduleAt}
+                        type="button"
+                        onClick={() => setComposeMode('tweet')}
+                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                          composeMode === 'tweet'
+                            ? 'bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-lg'
+                            : 'text-slate-300 hover:text-white'
+                        }`}
                       >
-                        Schedule tweet
+                        Tweet
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setComposeMode('thread')}
+                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                          composeMode === 'thread'
+                            ? 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-lg'
+                            : 'text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        Thread
                       </button>
                     </div>
-                  </form>
-                ) : (
-                  <form onSubmit={submitThreadSchedule} className="flex flex-col gap-4">
-                    <div className="space-y-3">
-                      {threadTweets.map((tweet, index) => (
-                        <div key={index} className="flex gap-2">
-                          <div className="flex flex-col items-center gap-2 pt-4">
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
-                              {index + 1}
+                  </div>
+
+                  {composeMode === 'tweet' ? (
+                    <form onSubmit={submitSchedule} className="flex flex-col gap-5">
+                      <textarea
+                        value={composeText}
+                        onChange={(e) => setComposeText(e.target.value)}
+                        rows={6}
+                        className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-100 shadow-inner placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                        placeholder="What would you like to share?"
+                      />
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <input
+                          type="datetime-local"
+                          value={scheduleAt}
+                          onChange={(e) => setScheduleAt(e.target.value)}
+                          className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 shadow-sm placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 sm:w-auto"
+                        />
+                        <button
+                          type="submit"
+                          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:to-sky-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:ring-offset-2 focus:ring-offset-slate-950 sm:w-auto"
+                          disabled={!composeText || !scheduleAt}
+                        >
+                          Schedule tweet
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <form onSubmit={submitThreadSchedule} className="flex flex-col gap-5">
+                      <div className="space-y-4">
+                        {threadTweets.map((tweet, index) => (
+                          <div key={index} className="flex items-start gap-3">
+                            <div className="flex flex-col items-center gap-2 pt-1.5">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-indigo-400/60 bg-indigo-500/20 text-xs font-bold text-indigo-100">
+                                {index + 1}
+                              </div>
+                              {index < threadTweets.length - 1 && <div className="h-full w-px flex-1 bg-white/10" />}
                             </div>
-                            {index < threadTweets.length - 1 && (
-                              <div className="h-full w-0.5 flex-1 bg-slate-200" />
+                            <div className="flex-1">
+                              <textarea
+                                value={tweet}
+                                onChange={(e) => updateThreadTweet(index, e.target.value)}
+                                rows={3}
+                                className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-sm text-slate-100 shadow-inner placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                                placeholder={`Tweet ${index + 1}`}
+                              />
+                            </div>
+                            {threadTweets.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeThreadTweet(index)}
+                                className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-300 transition hover:border-rose-400/70 hover:bg-rose-500/20 hover:text-rose-100"
+                              >
+                                ×
+                              </button>
                             )}
                           </div>
-                          <div className="flex-1">
-                            <textarea
-                              value={tweet}
-                              onChange={(e) => updateThreadTweet(index, e.target.value)}
-                              rows={3}
-                              className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                              placeholder={`Tweet ${index + 1}`}
-                            />
-                          </div>
-                          {threadTweets.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeThreadTweet(index)}
-                              className="mt-3 h-8 w-8 rounded-full border border-slate-300 text-slate-400 transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-600"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addThreadTweet}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700"
-                    >
-                      + Add tweet
-                    </button>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                      <input
-                        type="datetime-local"
-                        value={scheduleAt}
-                        onChange={(e) => setScheduleAt(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                      />
+                        ))}
+                      </div>
                       <button
-                        type="submit"
-                        className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
-                        disabled={!scheduleAt || threadTweets.every(t => !t.trim())}
+                        type="button"
+                        onClick={addThreadTweet}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/15 bg-slate-950/40 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-indigo-300/70 hover:text-white"
                       >
-                        Schedule thread
+                        + Add tweet
                       </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h4 className="text-base font-semibold text-slate-900">Scheduled posts</h4>
-                  <p className="mt-1 text-sm text-slate-500">
-                    A quick look at everything queued from Omni Write.
-                  </p>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <input
+                          type="datetime-local"
+                          value={scheduleAt}
+                          onChange={(e) => setScheduleAt(e.target.value)}
+                          className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 shadow-sm placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 sm:w-auto"
+                        />
+                        <button
+                          type="submit"
+                          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-violet-400 hover:to-indigo-400 focus:outline-none focus:ring-2 focus:ring-violet-400/60 focus:ring-offset-2 focus:ring-offset-slate-950 sm:w-auto"
+                          disabled={!scheduleAt || threadTweets.every((t) => !t.trim())}
+                        >
+                          Schedule thread
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
-                {scheduled.length === 0 && scheduledThreads.length === 0 ? (
-                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-6 text-center text-sm text-slate-500">
-                    Nothing scheduled yet. Your upcoming posts will appear here.
+
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h4 className="text-base font-semibold text-white">Scheduled posts</h4>
+                    <p className="mt-1 text-sm text-slate-300/80">
+                      A quick look at everything queued from Omni Write.
+                    </p>
                   </div>
-                ) : (
-                  <ul className="space-y-4">
-                    {scheduled.map((s) => {
-                      const badgeClass = statusStyles[s.status] || 'bg-slate-100 text-slate-600'
-                      const badgeLabel = statusLabels[s.status] || s.status
+                  {scheduled.length === 0 && scheduledThreads.length === 0 ? (
+                    <div className="flex min-h-[160px] items-center justify-center rounded-2xl border border-dashed border-white/20 bg-slate-950/40 p-6 text-center text-sm text-slate-300/80">
+                      Nothing scheduled yet. Your upcoming posts will appear here.
+                    </div>
+                  ) : (
+                    <ul className="space-y-4">
+                      {scheduled.map((s) => {
+                        const badgeClass = statusStyles[s.status] || 'bg-slate-400/10 text-slate-200'
+                        const badgeLabel = statusLabels[s.status] || s.status
 
-                      return (
-                        <li
-                          key={`tweet-${s.id}`}
-                          className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
-                        >
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-start gap-2">
-                              <span className="mt-0.5 inline-flex items-center rounded-md bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
-                                Tweet
-                              </span>
-                              <p className="flex-1 text-sm font-medium leading-relaxed text-slate-900">
-                                {s.text || <span className="italic text-slate-400">No content</span>}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-                              <span>{formatDateTime(s.scheduledAt)}</span>
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${badgeClass}`}
-                                >
-                                  {badgeLabel}
+                        return (
+                          <li
+                            key={`tweet-${s.id}`}
+                            className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 shadow-lg"
+                          >
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-start gap-2">
+                                <span className="mt-0.5 inline-flex items-center rounded-full bg-sky-400/10 px-3 py-0.5 text-xs font-semibold text-sky-200">
+                                  Tweet
                                 </span>
-                                {s.status === 'QUEUED' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => cancelScheduled(s.id)}
-                                    className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                                <p className="flex-1 text-sm font-medium leading-relaxed text-slate-100">
+                                  {s.text || <span className="italic text-slate-400">No content</span>}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300/80">
+                                <span>{formatDateTime(s.scheduledAt)}</span>
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}
                                   >
-                                    Cancel
-                                  </button>
-                                )}
+                                    {badgeLabel}
+                                  </span>
+                                  {s.status === 'QUEUED' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelScheduled(s.id)}
+                                      className="inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </li>
-                      )
-                    })}
-                    {scheduledThreads.map((t) => {
-                      const badgeClass = statusStyles[t.status] || 'bg-slate-100 text-slate-600'
-                      const badgeLabel = statusLabels[t.status] || t.status
+                          </li>
+                        )
+                      })}
+                      {scheduledThreads.map((t) => {
+                        const badgeClass = statusStyles[t.status] || 'bg-slate-400/10 text-slate-200'
+                        const badgeLabel = statusLabels[t.status] || t.status
 
-                      return (
-                        <li
-                          key={`thread-${t.id}`}
-                          className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
-                        >
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-start gap-2">
-                              <span className="mt-0.5 inline-flex items-center rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-                                Thread ({t.tweets?.length || 0})
-                              </span>
-                              <div className="flex-1 space-y-2">
-                                {(t.tweets || []).slice(0, 2).map((tweet, idx) => (
-                                  <p key={idx} className="text-sm font-medium leading-relaxed text-slate-900">
-                                    {idx + 1}. {tweet.length > 80 ? tweet.substring(0, 80) + '...' : tweet}
-                                  </p>
-                                ))}
-                                {t.tweets && t.tweets.length > 2 && (
-                                  <p className="text-xs italic text-slate-500">
-                                    + {t.tweets.length - 2} more tweet{t.tweets.length - 2 !== 1 ? 's' : ''}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-                              <span>{formatDateTime(t.scheduledAt)}</span>
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${badgeClass}`}
-                                >
-                                  {badgeLabel}
+                        return (
+                          <li
+                            key={`thread-${t.id}`}
+                            className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 shadow-lg"
+                          >
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-start gap-2">
+                                <span className="mt-0.5 inline-flex items-center rounded-full bg-violet-400/10 px-3 py-0.5 text-xs font-semibold text-violet-200">
+                                  Thread ({t.tweets?.length || 0})
                                 </span>
-                                {t.status === 'QUEUED' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => cancelScheduledThread(t.id)}
-                                    className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                                <div className="flex-1 space-y-2">
+                                  {(t.tweets || []).slice(0, 2).map((tweet, idx) => (
+                                    <p key={idx} className="text-sm font-medium leading-relaxed text-slate-100">
+                                      {idx + 1}. {tweet.length > 80 ? `${tweet.substring(0, 80)}…` : tweet}
+                                    </p>
+                                  ))}
+                                  {t.tweets && t.tweets.length > 2 && (
+                                    <p className="text-xs italic text-slate-400">
+                                      + {t.tweets.length - 2} more tweet{t.tweets.length - 2 !== 1 ? 's' : ''}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300/80">
+                                <span>{formatDateTime(t.scheduledAt)}</span>
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}
                                   >
-                                    Cancel
-                                  </button>
-                                )}
+                                    {badgeLabel}
+                                  </span>
+                                  {t.status === 'QUEUED' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelScheduledThread(t.id)}
+                                      className="inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </article>
+        </div>
       </div>
     </main>
   )
