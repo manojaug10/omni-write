@@ -3,6 +3,58 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
+const PREVIEW_USER = {
+  firstName: 'Avery',
+  lastName: 'Hart',
+  username: 'avery.writes',
+  primaryEmailAddress: { emailAddress: 'avery@example.com' },
+  id: 'user_01H9PREVIEW',
+  createdAt: '2024-01-16T12:45:00.000Z',
+  profileImageUrl: '',
+}
+
+const PREVIEW_DB_USER = {
+  id: 'clu_01h9preview',
+  clerkId: 'user_01H9PREVIEW',
+  email: 'avery@example.com',
+  name: 'Avery Hart',
+  createdAt: '2024-01-16T13:05:00.000Z',
+  updatedAt: '2024-03-02T09:22:00.000Z',
+}
+
+const PREVIEW_SCHEDULED_TWEETS = [
+  {
+    id: 'tweet_preview_1',
+    text: 'Drafting product launch copy for next Tuesday — any final metrics we should highlight?',
+    scheduledAt: '2024-03-08T15:30:00.000Z',
+    status: 'QUEUED',
+  },
+  {
+    id: 'tweet_preview_2',
+    text: 'Shipping a small but mighty dashboard update today. ✨',
+    scheduledAt: '2024-03-05T11:00:00.000Z',
+    status: 'SENT',
+  },
+]
+
+const PREVIEW_SCHEDULED_THREADS = [
+  {
+    id: 'thread_preview_1',
+    tweets: [
+      'Launching a behind-the-scenes thread on our AI-assisted writing workflow.',
+      'From prompt templates to QA — here’s what keeps the content sharp.',
+      'Bonus: a checklist you can copy into your own process.',
+    ],
+    scheduledAt: '2024-03-12T18:15:00.000Z',
+    status: 'QUEUED',
+  },
+]
+
+const PREVIEW_CONNECTION = {
+  username: 'omniwrite_team',
+  providerUserId: '1234567890',
+}
+
 const formatDate = (value, options) => {
   if (!value) {
     return 'Not set'
@@ -41,7 +93,7 @@ function ProfilePage() {
   const { user, isLoaded } = useUser()
   const { getToken } = useAuth()
   const [dbUser, setDbUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [banner, setBanner] = useState(null)
   const [xConnection, setXConnection] = useState(null)
@@ -130,8 +182,15 @@ function ProfilePage() {
     }
   }, [fetchXConnection])
 
+  const previewMode = !user
+  const profileUser = previewMode ? PREVIEW_USER : user
+
   const connectTwitter = useCallback(async () => {
     try {
+      if (previewMode) {
+        setBanner({ type: 'error', message: 'Sign in to connect your Twitter account.' })
+        return
+      }
       const token = await getToken()
       const redirect = `${window.location.origin}/profile`
       const url = `${API_BASE_URL}/api/auth/x?mode=json&redirect=${encodeURIComponent(redirect)}`
@@ -154,10 +213,14 @@ function ProfilePage() {
       console.error('Connect Twitter failed:', e)
       setBanner({ type: 'error', message: e.message || 'Unable to start Twitter OAuth.' })
     }
-  }, [getToken])
+  }, [getToken, previewMode])
 
   const disconnectTwitter = useCallback(async () => {
     try {
+      if (previewMode) {
+        setBanner({ type: 'error', message: 'Sign in to disconnect Twitter.' })
+        return
+      }
       const token = await getToken()
       const resp = await fetch(`${API_BASE_URL}/api/x/connection`, {
         method: 'DELETE',
@@ -174,7 +237,7 @@ function ProfilePage() {
     } catch (e) {
       setBanner({ type: 'error', message: e.message || 'Failed to disconnect Twitter.' })
     }
-  }, [getToken])
+  }, [getToken, previewMode])
 
   const [composeText, setComposeText] = useState('')
   const [scheduleAt, setScheduleAt] = useState('')
@@ -184,81 +247,85 @@ function ProfilePage() {
   const [scheduledThreads, setScheduledThreads] = useState([])
 
   const displayName = useMemo(() => {
-    if (!user) {
-      return ''
+    if (!profileUser) {
+      return 'Your profile'
     }
 
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
-    return fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Your profile'
-  }, [user])
+    const fullName = [profileUser.firstName, profileUser.lastName].filter(Boolean).join(' ')
+    return fullName || profileUser.username || profileUser.primaryEmailAddress?.emailAddress || 'Your profile'
+  }, [profileUser])
 
   const avatarInitial = useMemo(() => {
-    const source = displayName || user?.primaryEmailAddress?.emailAddress || ''
+    const source = displayName || profileUser?.primaryEmailAddress?.emailAddress || ''
     return source ? source.charAt(0).toUpperCase() : '?'
-  }, [displayName, user])
+  }, [displayName, profileUser])
 
   const truncatedUserId = useMemo(() => {
-    if (!user?.id) {
+    if (!profileUser?.id) {
       return ''
     }
 
-    if (user.id.length <= 12) {
-      return user.id
+    if (profileUser.id.length <= 12) {
+      return profileUser.id
     }
 
-    return `${user.id.slice(0, 6)}…${user.id.slice(-4)}`
-  }, [user])
+    return `${profileUser.id.slice(0, 6)}…${profileUser.id.slice(-4)}`
+  }, [profileUser])
 
   const accountDetails = useMemo(() => {
-    if (!user) {
+    if (!profileUser) {
       return []
     }
 
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Not set'
+    const fullName = [profileUser.firstName, profileUser.lastName].filter(Boolean).join(' ') || 'Not set'
 
     return [
       { label: 'Name', value: fullName },
-      { label: 'Email', value: user.primaryEmailAddress?.emailAddress || 'Not set' },
-      { label: 'Username', value: user.username || 'Not set' },
-      { label: 'User ID', value: user.id, isMono: true },
-      { label: 'Joined', value: formatDateOnly(user.createdAt) },
+      { label: 'Email', value: profileUser.primaryEmailAddress?.emailAddress || 'Not set' },
+      { label: 'Username', value: profileUser.username || 'Not set' },
+      { label: 'User ID', value: profileUser.id, isMono: true },
+      { label: 'Joined', value: formatDateOnly(profileUser.createdAt) },
     ]
-  }, [user])
+  }, [profileUser])
+
+  const displayDbUser = previewMode ? PREVIEW_DB_USER : dbUser
 
   const databaseDetails = useMemo(() => {
-    if (!dbUser) {
+    if (!displayDbUser) {
       return []
     }
 
     return [
-      { label: 'Database ID', value: dbUser.id, isMono: true },
-      { label: 'Clerk ID', value: dbUser.clerkId, isMono: true },
-      { label: 'Email', value: dbUser.email },
-      { label: 'Name', value: dbUser.name || 'Not set' },
-      { label: 'Created', value: formatDateTime(dbUser.createdAt) },
-      { label: 'Updated', value: formatDateTime(dbUser.updatedAt) },
+      { label: 'Database ID', value: displayDbUser.id, isMono: true },
+      { label: 'Clerk ID', value: displayDbUser.clerkId, isMono: true },
+      { label: 'Email', value: displayDbUser.email },
+      { label: 'Name', value: displayDbUser.name || 'Not set' },
+      { label: 'Created', value: formatDateTime(displayDbUser.createdAt) },
+      { label: 'Updated', value: formatDateTime(displayDbUser.updatedAt) },
     ]
-  }, [dbUser])
+  }, [displayDbUser])
 
   const queuedCount = useMemo(
-    () => scheduled.filter((item) => item.status === 'QUEUED').length,
-    [scheduled]
+    () => (previewMode ? PREVIEW_SCHEDULED_TWEETS : scheduled).filter((item) => item.status === 'QUEUED').length,
+    [previewMode, scheduled]
   )
 
   const heroStats = useMemo(
     () => [
-      { label: 'Member Since', value: formatDateOnly(user?.createdAt) },
+      { label: 'Member Since', value: formatDateOnly(profileUser?.createdAt) },
       { label: 'Queued Tweets', value: queuedCount.toString() },
       {
         label: 'Last Sync',
-        value: dbUser?.updatedAt ? formatDateTime(dbUser.updatedAt) : 'Awaiting sync',
+        value: displayDbUser?.updatedAt ? formatDateTime(displayDbUser.updatedAt) : 'Awaiting sync',
       },
     ],
-    [user, queuedCount, dbUser]
+    [profileUser, queuedCount, displayDbUser]
   )
 
-  const connectionHandle = xConnection
-    ? xConnection.username || xConnection.providerUserId
+  const connectionRecord = previewMode ? PREVIEW_CONNECTION : xConnection
+
+  const connectionHandle = connectionRecord
+    ? connectionRecord.username || connectionRecord.providerUserId
     : ''
 
   const loadScheduled = useCallback(async () => {
@@ -286,6 +353,10 @@ function ProfilePage() {
   const submitSchedule = useCallback(async (e) => {
     e.preventDefault()
     try {
+      if (previewMode) {
+        setBanner({ type: 'error', message: 'Sign in to schedule tweets.' })
+        return
+      }
       const token = await getToken()
       // Convert datetime-local (no timezone) to ISO string with user's timezone
       const localDate = new Date(scheduleAt)
@@ -310,10 +381,14 @@ function ProfilePage() {
     } catch (e) {
       setBanner({ type: 'error', message: e.message || 'Failed to schedule tweet.' })
     }
-  }, [composeText, scheduleAt, getToken, loadScheduled])
+  }, [composeText, scheduleAt, getToken, loadScheduled, previewMode])
 
   const cancelScheduled = useCallback(async (id) => {
     try {
+      if (previewMode) {
+        setBanner({ type: 'error', message: 'Sign in to manage scheduled tweets.' })
+        return
+      }
       const token = await getToken()
       const resp = await fetch(`${API_BASE_URL}/api/x/tweet/schedule/${id}`, {
         method: 'DELETE',
@@ -326,7 +401,7 @@ function ProfilePage() {
     } catch (err) {
       console.error('Failed to cancel scheduled tweet', err)
     }
-  }, [getToken, loadScheduled])
+  }, [getToken, loadScheduled, previewMode])
 
   const loadScheduledThreads = useCallback(async () => {
     try {
@@ -353,6 +428,10 @@ function ProfilePage() {
   const submitThreadSchedule = useCallback(async (e) => {
     e.preventDefault()
     try {
+      if (previewMode) {
+        setBanner({ type: 'error', message: 'Sign in to schedule threads.' })
+        return
+      }
       const token = await getToken()
       const localDate = new Date(scheduleAt)
       const isoWithTimezone = localDate.toISOString()
@@ -383,10 +462,14 @@ function ProfilePage() {
     } catch (e) {
       setBanner({ type: 'error', message: e.message || 'Failed to schedule thread.' })
     }
-  }, [threadTweets, scheduleAt, getToken, loadScheduledThreads])
+  }, [threadTweets, scheduleAt, getToken, loadScheduledThreads, previewMode])
 
   const cancelScheduledThread = useCallback(async (id) => {
     try {
+      if (previewMode) {
+        setBanner({ type: 'error', message: 'Sign in to manage scheduled threads.' })
+        return
+      }
       const token = await getToken()
       const resp = await fetch(`${API_BASE_URL}/api/x/thread/schedule/${id}`, {
         method: 'DELETE',
@@ -399,7 +482,7 @@ function ProfilePage() {
     } catch (err) {
       console.error('Failed to cancel scheduled thread', err)
     }
-  }, [getToken, loadScheduledThreads])
+  }, [getToken, loadScheduledThreads, previewMode])
 
   const addThreadTweet = useCallback(() => {
     setThreadTweets([...threadTweets, ''])
@@ -428,6 +511,8 @@ function ProfilePage() {
     )
   }
 
+  const scheduledTweetsDisplay = previewMode ? PREVIEW_SCHEDULED_TWEETS : scheduled
+  const scheduledThreadsDisplay = previewMode ? PREVIEW_SCHEDULED_THREADS : scheduledThreads
 
   const bannerClasses =
     banner?.type === 'success'
@@ -442,6 +527,17 @@ function ProfilePage() {
         <div className="absolute bottom-[-30%] left-1/3 h-96 w-96 rounded-full bg-sky-500/30 blur-[160px]" />
       </div>
       <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-12">
+        {previewMode && (
+          <div className="mb-10 flex items-start gap-3 rounded-3xl border border-amber-400/30 bg-amber-400/10 px-6 py-4 text-sm text-amber-100 shadow-xl backdrop-blur">
+            <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-300/50 text-[10px] font-semibold uppercase tracking-[0.3em]">
+              Demo
+            </span>
+            <p className="flex-1 text-sm font-medium tracking-tight">
+              You&apos;re viewing sample data. Sign in to Omni Write to manage your live profile and schedules.
+            </p>
+          </div>
+        )}
+
         {banner && (
           <div
             className={`mb-10 flex items-start gap-3 rounded-3xl border px-6 py-4 text-sm shadow-2xl backdrop-blur ${bannerClasses}`}
@@ -469,9 +565,9 @@ function ProfilePage() {
             <div className="space-y-6">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
                 <div className="relative shrink-0">
-                  {user?.profileImageUrl ? (
+                  {profileUser?.profileImageUrl ? (
                     <img
-                      src={user.profileImageUrl}
+                      src={profileUser.profileImageUrl}
                       alt={`${displayName}'s profile`}
                       className="h-24 w-24 rounded-[28px] border-2 border-white/40 object-cover shadow-xl"
                     />
@@ -487,16 +583,16 @@ function ProfilePage() {
                 <div className="space-y-3">
                   <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{displayName}</h1>
                   <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300/90">
-                    {user?.primaryEmailAddress?.emailAddress && <span>{user.primaryEmailAddress.emailAddress}</span>}
-                    {user?.username && (
+                    {profileUser?.primaryEmailAddress?.emailAddress && <span>{profileUser.primaryEmailAddress.emailAddress}</span>}
+                    {profileUser?.username && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-slate-100">
-                        @{user.username}
+                        @{profileUser.username}
                       </span>
                     )}
                     {truncatedUserId && (
                       <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-200">
                         <span>ID</span>
-                        <code title={user.id} className="font-mono text-slate-100">
+                        <code title={profileUser.id} className="font-mono text-slate-100">
                           {truncatedUserId}
                         </code>
                       </span>
@@ -563,7 +659,7 @@ function ProfilePage() {
                 </p>
               </header>
 
-              {dbUser ? (
+              {displayDbUser ? (
                 <dl className="mt-6 divide-y divide-white/5">
                   {databaseDetails.map(({ label, value, isMono }) => {
                     const display = value ?? 'Not set'
@@ -602,7 +698,7 @@ function ProfilePage() {
                   Connect your account to queue posts directly from Omni Write.
                 </p>
               </div>
-              {xConnection ? (
+              {connectionRecord ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-slate-950/40 px-4 py-2 text-sm font-semibold text-slate-100">
                     @{connectionHandle}
@@ -610,7 +706,8 @@ function ProfilePage() {
                   <button
                     type="button"
                     onClick={disconnectTwitter}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={previewMode}
                   >
                     Disconnect
                   </button>
@@ -619,7 +716,8 @@ function ProfilePage() {
                 <button
                   type="button"
                   onClick={connectTwitter}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:to-sky-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:to-sky-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={previewMode}
                 >
                   Connect account
                 </button>
@@ -630,7 +728,7 @@ function ProfilePage() {
               To edit profile details, use the menu in the top-right corner.
             </p>
 
-            {xConnection && (
+            {connectionRecord && (
               <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -674,7 +772,8 @@ function ProfilePage() {
                         value={composeText}
                         onChange={(e) => setComposeText(e.target.value)}
                         rows={6}
-                        className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-100 shadow-inner placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                        className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-100 shadow-inner placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 disabled:cursor-not-allowed disabled:opacity-70"
+                        disabled={previewMode}
                         placeholder="What would you like to share?"
                       />
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -682,12 +781,13 @@ function ProfilePage() {
                           type="datetime-local"
                           value={scheduleAt}
                           onChange={(e) => setScheduleAt(e.target.value)}
-                          className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 shadow-sm placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 sm:w-auto"
+                          className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 shadow-sm placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                          disabled={previewMode}
                         />
                         <button
                           type="submit"
-                          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:to-sky-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:ring-offset-2 focus:ring-offset-slate-950 sm:w-auto"
-                          disabled={!composeText || !scheduleAt}
+                          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-indigo-400 hover:to-sky-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                          disabled={previewMode || !composeText || !scheduleAt}
                         >
                           Schedule tweet
                         </button>
@@ -709,7 +809,8 @@ function ProfilePage() {
                                 value={tweet}
                                 onChange={(e) => updateThreadTweet(index, e.target.value)}
                                 rows={3}
-                                className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-sm text-slate-100 shadow-inner placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                                className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-sm text-slate-100 shadow-inner placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 disabled:cursor-not-allowed disabled:opacity-70"
+                                disabled={previewMode}
                                 placeholder={`Tweet ${index + 1}`}
                               />
                             </div>
@@ -717,7 +818,8 @@ function ProfilePage() {
                               <button
                                 type="button"
                                 onClick={() => removeThreadTweet(index)}
-                                className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-300 transition hover:border-rose-400/70 hover:bg-rose-500/20 hover:text-rose-100"
+                                className="mt-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-slate-300 transition hover:border-rose-400/70 hover:bg-rose-500/20 hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={previewMode}
                               >
                                 ×
                               </button>
@@ -728,7 +830,8 @@ function ProfilePage() {
                       <button
                         type="button"
                         onClick={addThreadTweet}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/15 bg-slate-950/40 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-indigo-300/70 hover:text-white"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/15 bg-slate-950/40 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-indigo-300/70 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={previewMode}
                       >
                         + Add tweet
                       </button>
@@ -737,12 +840,13 @@ function ProfilePage() {
                           type="datetime-local"
                           value={scheduleAt}
                           onChange={(e) => setScheduleAt(e.target.value)}
-                          className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 shadow-sm placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 sm:w-auto"
+                          className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 shadow-sm placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                          disabled={previewMode}
                         />
                         <button
                           type="submit"
-                          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-violet-400 hover:to-indigo-400 focus:outline-none focus:ring-2 focus:ring-violet-400/60 focus:ring-offset-2 focus:ring-offset-slate-950 sm:w-auto"
-                          disabled={!scheduleAt || threadTweets.every((t) => !t.trim())}
+                          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-violet-400 hover:to-indigo-400 focus:outline-none focus:ring-2 focus:ring-violet-400/60 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                          disabled={previewMode || !scheduleAt || threadTweets.every((t) => !t.trim())}
                         >
                           Schedule thread
                         </button>
@@ -758,13 +862,13 @@ function ProfilePage() {
                       A quick look at everything queued from Omni Write.
                     </p>
                   </div>
-                  {scheduled.length === 0 && scheduledThreads.length === 0 ? (
+                {scheduledTweetsDisplay.length === 0 && scheduledThreadsDisplay.length === 0 ? (
                     <div className="flex min-h-[160px] items-center justify-center rounded-2xl border border-dashed border-white/20 bg-slate-950/40 p-6 text-center text-sm text-slate-300/80">
                       Nothing scheduled yet. Your upcoming posts will appear here.
                     </div>
                   ) : (
                     <ul className="space-y-4">
-                      {scheduled.map((s) => {
+                    {scheduledTweetsDisplay.map((s) => {
                         const badgeClass = statusStyles[s.status] || 'bg-slate-400/10 text-slate-200'
                         const badgeLabel = statusLabels[s.status] || s.status
 
@@ -794,7 +898,8 @@ function ProfilePage() {
                                     <button
                                       type="button"
                                       onClick={() => cancelScheduled(s.id)}
-                                      className="inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+                                      className="inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                                      disabled={previewMode}
                                     >
                                       Cancel
                                     </button>
@@ -805,7 +910,7 @@ function ProfilePage() {
                           </li>
                         )
                       })}
-                      {scheduledThreads.map((t) => {
+                    {scheduledThreadsDisplay.map((t) => {
                         const badgeClass = statusStyles[t.status] || 'bg-slate-400/10 text-slate-200'
                         const badgeLabel = statusLabels[t.status] || t.status
 
@@ -844,7 +949,8 @@ function ProfilePage() {
                                     <button
                                       type="button"
                                       onClick={() => cancelScheduledThread(t.id)}
-                                      className="inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+                                      className="inline-flex items-center rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-white/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400/50 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                                      disabled={previewMode}
                                     >
                                       Cancel
                                     </button>
