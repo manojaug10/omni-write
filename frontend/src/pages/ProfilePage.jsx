@@ -179,6 +179,9 @@ function ProfilePage() {
   const [composeText, setComposeText] = useState('')
   const [scheduleAt, setScheduleAt] = useState('')
   const [scheduled, setScheduled] = useState([])
+  const [composeMode, setComposeMode] = useState('tweet') // 'tweet' or 'thread'
+  const [threadTweets, setThreadTweets] = useState(['', ''])
+  const [scheduledThreads, setScheduledThreads] = useState([])
 
   const displayName = useMemo(() => {
     if (!user) {
@@ -319,6 +322,95 @@ function ProfilePage() {
       console.error('Failed to cancel scheduled tweet', err)
     }
   }, [getToken, loadScheduled])
+
+  const loadScheduledThreads = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/x/thread/schedule`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        setScheduledThreads(data.scheduled || [])
+      }
+    } catch (err) {
+      console.error('Failed to load scheduled threads', err)
+    }
+  }, [getToken])
+
+  useEffect(() => {
+    if (xConnection) {
+      loadScheduledThreads()
+    }
+  }, [xConnection, loadScheduledThreads])
+
+  const submitThreadSchedule = useCallback(async (e) => {
+    e.preventDefault()
+    try {
+      const token = await getToken()
+      const localDate = new Date(scheduleAt)
+      const isoWithTimezone = localDate.toISOString()
+
+      // Filter out empty tweets
+      const validTweets = threadTweets.filter(t => t.trim())
+      if (validTweets.length === 0) {
+        setBanner({ type: 'error', message: 'Please add at least one tweet to the thread.' })
+        return
+      }
+
+      const body = { tweets: validTweets, scheduledAt: isoWithTimezone }
+      const resp = await fetch(`${API_BASE_URL}/api/x/thread/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      if (resp.ok) {
+        setThreadTweets(['', ''])
+        setScheduleAt('')
+        setBanner({ type: 'success', message: 'Thread scheduled.' })
+        loadScheduledThreads()
+      } else {
+        const data = await resp.json().catch(() => null)
+        setBanner({ type: 'error', message: data?.message || 'Failed to schedule thread.' })
+      }
+    } catch (e) {
+      setBanner({ type: 'error', message: e.message || 'Failed to schedule thread.' })
+    }
+  }, [threadTweets, scheduleAt, getToken, loadScheduledThreads])
+
+  const cancelScheduledThread = useCallback(async (id) => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/x/thread/schedule/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        loadScheduledThreads()
+      }
+    } catch (err) {
+      console.error('Failed to cancel scheduled thread', err)
+    }
+  }, [getToken, loadScheduledThreads])
+
+  const addThreadTweet = useCallback(() => {
+    setThreadTweets([...threadTweets, ''])
+  }, [threadTweets])
+
+  const removeThreadTweet = useCallback((index) => {
+    if (threadTweets.length > 1) {
+      setThreadTweets(threadTweets.filter((_, i) => i !== index))
+    }
+  }, [threadTweets])
+
+  const updateThreadTweet = useCallback((index, value) => {
+    const updated = [...threadTweets]
+    updated[index] = value
+    setThreadTweets(updated)
+  }, [threadTweets])
 
   if (!isLoaded || loading) {
     return (
@@ -521,45 +613,135 @@ function ProfilePage() {
 
           {xConnection && (
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
-              <form onSubmit={submitSchedule} className="flex flex-col gap-4">
-                <div>
-                  <h4 className="text-base font-semibold text-slate-900">Compose tweet</h4>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Draft a post and choose when it should go live.
-                  </p>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-base font-semibold text-slate-900">
+                      Compose {composeMode === 'tweet' ? 'tweet' : 'thread'}
+                    </h4>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Draft a post and choose when it should go live.
+                    </p>
+                  </div>
+                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setComposeMode('tweet')}
+                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                        composeMode === 'tweet'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Tweet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setComposeMode('thread')}
+                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                        composeMode === 'thread'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Thread
+                    </button>
+                  </div>
                 </div>
-                <textarea
-                  value={composeText}
-                  onChange={(e) => setComposeText(e.target.value)}
-                  rows={6}
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                  placeholder="What would you like to share?"
-                />
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <input
-                    type="datetime-local"
-                    value={scheduleAt}
-                    onChange={(e) => setScheduleAt(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                  />
-                  <button
-                    type="submit"
-                    className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
-                    disabled={!composeText || !scheduleAt}
-                  >
-                    Schedule tweet
-                  </button>
-                </div>
-              </form>
+
+                {composeMode === 'tweet' ? (
+                  <form onSubmit={submitSchedule} className="flex flex-col gap-4">
+                    <textarea
+                      value={composeText}
+                      onChange={(e) => setComposeText(e.target.value)}
+                      rows={6}
+                      className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                      placeholder="What would you like to share?"
+                    />
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                      <input
+                        type="datetime-local"
+                        value={scheduleAt}
+                        onChange={(e) => setScheduleAt(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                      />
+                      <button
+                        type="submit"
+                        className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
+                        disabled={!composeText || !scheduleAt}
+                      >
+                        Schedule tweet
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <form onSubmit={submitThreadSchedule} className="flex flex-col gap-4">
+                    <div className="space-y-3">
+                      {threadTweets.map((tweet, index) => (
+                        <div key={index} className="flex gap-2">
+                          <div className="flex flex-col items-center gap-2 pt-4">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                              {index + 1}
+                            </div>
+                            {index < threadTweets.length - 1 && (
+                              <div className="h-full w-0.5 flex-1 bg-slate-200" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <textarea
+                              value={tweet}
+                              onChange={(e) => updateThreadTweet(index, e.target.value)}
+                              rows={3}
+                              className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                              placeholder={`Tweet ${index + 1}`}
+                            />
+                          </div>
+                          {threadTweets.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeThreadTweet(index)}
+                              className="mt-3 h-8 w-8 rounded-full border border-slate-300 text-slate-400 transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-600"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addThreadTweet}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700"
+                    >
+                      + Add tweet
+                    </button>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                      <input
+                        type="datetime-local"
+                        value={scheduleAt}
+                        onChange={(e) => setScheduleAt(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                      />
+                      <button
+                        type="submit"
+                        className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
+                        disabled={!scheduleAt || threadTweets.every(t => !t.trim())}
+                      >
+                        Schedule thread
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
 
               <div className="flex flex-col gap-4">
                 <div>
-                  <h4 className="text-base font-semibold text-slate-900">Scheduled tweets</h4>
+                  <h4 className="text-base font-semibold text-slate-900">Scheduled posts</h4>
                   <p className="mt-1 text-sm text-slate-500">
                     A quick look at everything queued from Omni Write.
                   </p>
                 </div>
-                {scheduled.length === 0 ? (
+                {scheduled.length === 0 && scheduledThreads.length === 0 ? (
                   <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-6 text-center text-sm text-slate-500">
                     Nothing scheduled yet. Your upcoming posts will appear here.
                   </div>
@@ -571,13 +753,18 @@ function ProfilePage() {
 
                       return (
                         <li
-                          key={s.id}
+                          key={`tweet-${s.id}`}
                           className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
                         >
                           <div className="flex flex-col gap-3">
-                            <p className="text-sm font-medium leading-relaxed text-slate-900">
-                              {s.text || <span className="italic text-slate-400">No content</span>}
-                            </p>
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 inline-flex items-center rounded-md bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                                Tweet
+                              </span>
+                              <p className="flex-1 text-sm font-medium leading-relaxed text-slate-900">
+                                {s.text || <span className="italic text-slate-400">No content</span>}
+                              </p>
+                            </div>
                             <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
                               <span>{formatDateTime(s.scheduledAt)}</span>
                               <div className="flex items-center gap-3">
@@ -590,6 +777,56 @@ function ProfilePage() {
                                   <button
                                     type="button"
                                     onClick={() => cancelScheduled(s.id)}
+                                    className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      )
+                    })}
+                    {scheduledThreads.map((t) => {
+                      const badgeClass = statusStyles[t.status] || 'bg-slate-100 text-slate-600'
+                      const badgeLabel = statusLabels[t.status] || t.status
+
+                      return (
+                        <li
+                          key={`thread-${t.id}`}
+                          className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
+                        >
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 inline-flex items-center rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                Thread ({t.tweets?.length || 0})
+                              </span>
+                              <div className="flex-1 space-y-2">
+                                {(t.tweets || []).slice(0, 2).map((tweet, idx) => (
+                                  <p key={idx} className="text-sm font-medium leading-relaxed text-slate-900">
+                                    {idx + 1}. {tweet.length > 80 ? tweet.substring(0, 80) + '...' : tweet}
+                                  </p>
+                                ))}
+                                {t.tweets && t.tweets.length > 2 && (
+                                  <p className="text-xs italic text-slate-500">
+                                    + {t.tweets.length - 2} more tweet{t.tweets.length - 2 !== 1 ? 's' : ''}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                              <span>{formatDateTime(t.scheduledAt)}</span>
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${badgeClass}`}
+                                >
+                                  {badgeLabel}
+                                </span>
+                                {t.status === 'QUEUED' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => cancelScheduledThread(t.id)}
                                     className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
                                   >
                                     Cancel
