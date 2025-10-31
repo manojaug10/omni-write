@@ -1,5 +1,6 @@
 import { useUser, useAuth } from '@clerk/clerk-react'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Eye, EyeOff, Calendar, Clock, CheckCircle, MessageCircle, Hash, BarChart3, Send, Lock } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -37,6 +38,29 @@ const statusLabels = {
   POSTED: 'Posted',
 }
 
+// Helper function to mask sensitive information
+const maskText = (text, visible = false) => {
+  if (!text || text === 'Not set') return text
+  if (visible) return text
+  // Mask email addresses
+  if (text.includes('@')) {
+    const [local, domain] = text.split('@')
+    const maskedLocal = local.length > 2 ? `${local[0]}${'*'.repeat(local.length - 2)}${local[local.length - 1]}` : '**'
+    return `${maskedLocal}@${domain}`
+  }
+  // Mask names and other text
+  if (text.length <= 3) return '***'
+  return `${text[0]}${'*'.repeat(Math.min(text.length - 2, 8))}${text[text.length - 1]}`
+}
+
+// Helper function to mask IDs
+const maskId = (id, visible = false) => {
+  if (!id) return id
+  if (visible) return id
+  if (id.length <= 8) return '••••••••'
+  return `${id.slice(0, 3)}${'•'.repeat(6)}${id.slice(-3)}`
+}
+
 function ProfilePage() {
   const { user, isLoaded } = useUser()
   const { getToken } = useAuth()
@@ -45,6 +69,7 @@ function ProfilePage() {
   const [error, setError] = useState(null)
   const [banner, setBanner] = useState(null)
   const [xConnection, setXConnection] = useState(null)
+  const [showSensitiveInfo, setShowSensitiveInfo] = useState(false)
 
   const fetchUserFromDB = useCallback(async () => {
     if (!user) {
@@ -189,20 +214,24 @@ function ProfilePage() {
     }
 
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
-    return fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Your profile'
-  }, [user])
+    const name = fullName || user.username || user.primaryEmailAddress?.emailAddress || 'Your profile'
+    return maskText(name, showSensitiveInfo)
+  }, [user, showSensitiveInfo])
 
   const truncatedUserId = useMemo(() => {
     if (!user?.id) {
       return ''
     }
 
-    if (user.id.length <= 12) {
-      return user.id
-    }
+    return maskId(user.id, showSensitiveInfo)
+  }, [user, showSensitiveInfo])
 
-    return `${user.id.slice(0, 6)}…${user.id.slice(-4)}`
-  }, [user])
+  const maskedEmail = useMemo(() => {
+    if (!user?.primaryEmailAddress?.emailAddress) {
+      return 'Not set'
+    }
+    return maskText(user.primaryEmailAddress.emailAddress, showSensitiveInfo)
+  }, [user, showSensitiveInfo])
 
   const accountDetails = useMemo(() => {
     if (!user) {
@@ -212,13 +241,13 @@ function ProfilePage() {
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Not set'
 
     return [
-      { label: 'Name', value: fullName },
-      { label: 'Email', value: user.primaryEmailAddress?.emailAddress || 'Not set' },
+      { label: 'Name', value: maskText(fullName, showSensitiveInfo), isSensitive: true },
+      { label: 'Email', value: maskText(user.primaryEmailAddress?.emailAddress || 'Not set', showSensitiveInfo), isSensitive: true },
       { label: 'Username', value: user.username || 'Not set' },
-      { label: 'User ID', value: user.id, isMono: true },
+      { label: 'User ID', value: maskId(user.id, showSensitiveInfo), isMono: true, isSensitive: true },
       { label: 'Joined', value: formatDateOnly(user.createdAt) },
     ]
-  }, [user])
+  }, [user, showSensitiveInfo])
 
   const databaseDetails = useMemo(() => {
     if (!dbUser) {
@@ -226,14 +255,14 @@ function ProfilePage() {
     }
 
     return [
-      { label: 'Database ID', value: dbUser.id, isMono: true },
-      { label: 'Clerk ID', value: dbUser.clerkId, isMono: true },
-      { label: 'Email', value: dbUser.email },
-      { label: 'Name', value: dbUser.name || 'Not set' },
+      { label: 'Database ID', value: maskId(dbUser.id, showSensitiveInfo), isMono: true, isSensitive: true },
+      { label: 'Clerk ID', value: maskId(dbUser.clerkId, showSensitiveInfo), isMono: true, isSensitive: true },
+      { label: 'Email', value: maskText(dbUser.email, showSensitiveInfo), isSensitive: true },
+      { label: 'Name', value: maskText(dbUser.name || 'Not set', showSensitiveInfo), isSensitive: true },
       { label: 'Created', value: formatDateTime(dbUser.createdAt) },
       { label: 'Updated', value: formatDateTime(dbUser.updatedAt) },
     ]
-  }, [dbUser])
+  }, [dbUser, showSensitiveInfo])
 
   const queuedCount = useMemo(
     () => scheduled.filter((item) => item.status === 'QUEUED').length,
@@ -414,10 +443,10 @@ function ProfilePage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-500" aria-hidden />
-          <p className="text-sm font-medium text-indigo-700">We&apos;re getting your profile ready…</p>
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+          <p className="text-sm font-medium text-gray-600">Loading your profile...</p>
         </div>
       </div>
     )
@@ -429,423 +458,530 @@ function ProfilePage() {
       : 'border-rose-200 bg-rose-50/80 text-rose-700'
 
   return (
-    <main className="px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10">
-        {banner && (
-          <div className={`rounded-3xl border px-5 py-4 text-sm font-medium shadow-sm ${bannerClasses}`}>
-            {banner.message}
-          </div>
-        )}
-
-        <section className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-sky-500 opacity-90" />
-          <div className="absolute -top-24 -left-16 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
-          <div className="absolute -bottom-24 -right-12 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative z-10 p-8 sm:p-10">
-            <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-6">
-                {user?.profileImageUrl ? (
-                  <img
-                    src={user.profileImageUrl}
-                    alt={`${displayName}'s profile`}
-                    className="h-20 w-20 rounded-3xl border-2 border-white/70 shadow-lg"
-                  />
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-white/40 bg-white/10 text-2xl font-semibold uppercase tracking-wide">
-                    {displayName.charAt(0)}
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-xs uppercase tracking-[0.4em] text-white/60">Profile</p>
-                  <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                    {displayName}
-                  </h1>
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/80">
-                    {user?.primaryEmailAddress?.emailAddress && (
-                      <span>{user.primaryEmailAddress.emailAddress}</span>
-                    )}
-                    {truncatedUserId && (
-                      <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.23em] text-white/80 backdrop-blur">
-                        <span>ID</span>
-                        <code title={user.id} className="font-mono text-white">
-                          {truncatedUserId}
-                        </code>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid w-full gap-4 sm:w-auto sm:grid-cols-3">
-                {heroStats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-2xl bg-white/15 px-4 py-3 text-left backdrop-blur-sm"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-                      {stat.label}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-white">{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-            <header>
-              <h2 className="text-lg font-semibold text-slate-900">Account Information</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Live details synced from your Clerk profile.
-              </p>
-            </header>
-            <dl className="mt-6 space-y-5">
-              {accountDetails.map(({ label, value, isMono }) => {
-                const display = value ?? 'Not set'
-                const isPlaceholder = display === 'Not set' || display === ''
-                const valueClass = [
-                  'text-sm leading-6',
-                  isMono ? 'font-mono text-[13px] text-slate-700' : 'font-medium text-slate-900',
-                  isPlaceholder ? 'font-normal italic text-slate-400' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-
-                return (
-                  <div
-                    key={label}
-                    className="grid grid-cols-[minmax(130px,auto)_1fr] items-start gap-x-4 gap-y-1"
-                  >
-                    <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                      {label}
-                    </dt>
-                    <dd className={valueClass}>{display || '—'}</dd>
-                  </div>
-                )
-              })}
-            </dl>
-          </div>
-
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-            <header>
-              <h2 className="text-lg font-semibold text-slate-900">Database Profile</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Your Omni Write record stored in our database.
-              </p>
-            </header>
-            {error ? (
-              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
-                {error}
-              </div>
-            ) : databaseDetails.length ? (
-              <dl className="mt-6 space-y-5">
-                {databaseDetails.map(({ label, value, isMono }) => {
-                  const display = value ?? 'Not set'
-                  const isPlaceholder = display === 'Not set' || display === ''
-                  const valueClass = [
-                    'text-sm leading-6',
-                    isMono ? 'font-mono text-[13px] text-slate-700' : 'font-medium text-slate-900',
-                    isPlaceholder ? 'font-normal italic text-slate-400' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')
-
-                  return (
-                    <div
-                      key={label}
-                      className="grid grid-cols-[minmax(130px,auto)_1fr] items-start gap-x-4 gap-y-1"
-                    >
-                      <dt className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                        {label}
-                      </dt>
-                      <dd className={valueClass}>{display || '—'}</dd>
-                    </div>
-                  )
-                })}
-              </dl>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-sm leading-6 text-slate-500">
-                Profile not synced to the database yet. This usually resolves a few moments after
-                signup.
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <header className="border-b border-white/60 bg-white/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">X (Twitter) connection</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Connect your account to queue posts directly from Omni Write.
+              <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Manage your account settings and scheduled content
               </p>
             </div>
-            {xConnection ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                  @{connectionHandle}
-                </span>
-                <button
-                  type="button"
-                  onClick={disconnectTwitter}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
-                >
-                  Disconnect
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={connectTwitter}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2"
-              >
-                Connect account
-              </button>
-            )}
+            <button
+              onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:shadow-md"
+            >
+              {showSensitiveInfo ? (
+                <>
+                  <EyeOff className="h-4 w-4" />
+                  Hide Info
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Show Info
+                </>
+              )}
+            </button>
           </div>
+        </div>
+      </header>
 
-          <p className="mt-4 text-xs uppercase tracking-[0.3em] text-slate-400">
-            To edit profile details, use the menu in the top-right corner.
-          </p>
-
-          {xConnection && (
-            <div className="mt-8 grid gap-8 lg:grid-cols-2">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-base font-semibold text-slate-900">
-                      Compose {composeMode === 'tweet' ? 'tweet' : 'thread'}
-                    </h4>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Draft a post and choose when it should go live.
-                    </p>
-                  </div>
-                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setComposeMode('tweet')}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                        composeMode === 'tweet'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Tweet
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setComposeMode('thread')}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                        composeMode === 'thread'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Thread
-                    </button>
-                  </div>
-                </div>
-
-                {composeMode === 'tweet' ? (
-                  <form onSubmit={submitSchedule} className="flex flex-col gap-4">
-                    <textarea
-                      value={composeText}
-                      onChange={(e) => setComposeText(e.target.value)}
-                      rows={6}
-                      className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                      placeholder="What would you like to share?"
-                    />
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                      <input
-                        type="datetime-local"
-                        value={scheduleAt}
-                        onChange={(e) => setScheduleAt(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                      />
-                      <button
-                        type="submit"
-                        className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
-                        disabled={!composeText || !scheduleAt}
-                      >
-                        Schedule tweet
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={submitThreadSchedule} className="flex flex-col gap-4">
-                    <div className="space-y-3">
-                      {threadTweets.map((tweet, index) => (
-                        <div key={index} className="flex gap-2">
-                          <div className="flex flex-col items-center gap-2 pt-4">
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
-                              {index + 1}
-                            </div>
-                            {index < threadTweets.length - 1 && (
-                              <div className="h-full w-0.5 flex-1 bg-slate-200" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <textarea
-                              value={tweet}
-                              onChange={(e) => updateThreadTweet(index, e.target.value)}
-                              rows={3}
-                              className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-900 shadow-inner transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                              placeholder={`Tweet ${index + 1}`}
-                            />
-                          </div>
-                          {threadTweets.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeThreadTweet(index)}
-                              className="mt-3 h-8 w-8 rounded-full border border-slate-300 text-slate-400 transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-600"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addThreadTweet}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700"
-                    >
-                      + Add tweet
-                    </button>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                      <input
-                        type="datetime-local"
-                        value={scheduleAt}
-                        onChange={(e) => setScheduleAt(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                      />
-                      <button
-                        type="submit"
-                        className="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 sm:w-auto"
-                        disabled={!scheduleAt || threadTweets.every(t => !t.trim())}
-                      >
-                        Schedule thread
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h4 className="text-base font-semibold text-slate-900">Scheduled posts</h4>
-                  <p className="mt-1 text-sm text-slate-500">
-                    A quick look at everything queued from Omni Write.
-                  </p>
-                </div>
-                {scheduled.length === 0 && scheduledThreads.length === 0 ? (
-                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-6 text-center text-sm text-slate-500">
-                    Nothing scheduled yet. Your upcoming posts will appear here.
-                  </div>
-                ) : (
-                  <ul className="space-y-4">
-                    {scheduled.map((s) => {
-                      const badgeClass = statusStyles[s.status] || 'bg-slate-100 text-slate-600'
-                      const badgeLabel = statusLabels[s.status] || s.status
-
-                      return (
-                        <li
-                          key={`tweet-${s.id}`}
-                          className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
-                        >
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-start gap-2">
-                              <span className="mt-0.5 inline-flex items-center rounded-md bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
-                                Tweet
-                              </span>
-                              <p className="flex-1 text-sm font-medium leading-relaxed text-slate-900">
-                                {s.text || <span className="italic text-slate-400">No content</span>}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-                              <span>{formatDateTime(s.scheduledAt)}</span>
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${badgeClass}`}
-                                >
-                                  {badgeLabel}
-                                </span>
-                                {s.status === 'QUEUED' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => cancelScheduled(s.id)}
-                                    className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </li>
-                      )
-                    })}
-                    {scheduledThreads.map((t) => {
-                      const badgeClass = statusStyles[t.status] || 'bg-slate-100 text-slate-600'
-                      const badgeLabel = statusLabels[t.status] || t.status
-
-                      return (
-                        <li
-                          key={`thread-${t.id}`}
-                          className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm"
-                        >
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-start gap-2">
-                              <span className="mt-0.5 inline-flex items-center rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-                                Thread ({t.tweets?.length || 0})
-                              </span>
-                              <div className="flex-1 space-y-2">
-                                {(t.tweets || []).slice(0, 2).map((tweet, idx) => (
-                                  <p key={idx} className="text-sm font-medium leading-relaxed text-slate-900">
-                                    {idx + 1}. {tweet.length > 80 ? tweet.substring(0, 80) + '...' : tweet}
-                                  </p>
-                                ))}
-                                {t.tweets && t.tweets.length > 2 && (
-                                  <p className="text-xs italic text-slate-500">
-                                    + {t.tweets.length - 2} more tweet{t.tweets.length - 2 !== 1 ? 's' : ''}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-                              <span>{formatDateTime(t.scheduledAt)}</span>
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${badgeClass}`}
-                                >
-                                  {badgeLabel}
-                                </span>
-                                {t.status === 'QUEUED' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => cancelScheduledThread(t.id)}
-                                    className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </div>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-6">
+          {banner && (
+            <div className={`rounded-2xl border px-5 py-4 text-sm font-medium shadow-sm ${bannerClasses}`}>
+              {banner.message}
             </div>
           )}
-        </section>
-      </div>
-    </main>
+
+          {/* Profile Hero Section */}
+          <section className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md lg:p-8">
+            <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-50 opacity-50 blur-2xl" />
+            <div className="relative">
+              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-6">
+                  {user?.profileImageUrl ? (
+                    <img
+                      src={user.profileImageUrl}
+                      alt="Profile"
+                      className="h-20 w-20 rounded-2xl border-2 border-gray-100 shadow-md"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-gray-100 bg-gradient-to-br from-blue-100 to-indigo-100 text-2xl font-semibold uppercase tracking-wide text-indigo-600 shadow-md">
+                      {displayName.charAt(0) || 'U'}
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Profile</p>
+                      {!showSensitiveInfo && (
+                        <Lock className="h-3 w-3 text-gray-400" />
+                      )}
+                    </div>
+                    <h2 className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                      {displayName}
+                    </h2>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                      {maskedEmail !== 'Not set' && (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium">
+                          {maskedEmail}
+                        </span>
+                      )}
+                      {truncatedUserId && (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium font-mono">
+                          ID: {truncatedUserId}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {heroStats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 px-4 py-3 text-center backdrop-blur-sm"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+                        {stat.label}
+                      </p>
+                      <p className="mt-2 text-xl font-bold text-gray-900">{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Account Information & Database Profile */}
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Account Information Card */}
+            <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md">
+              <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 opacity-50 blur-2xl" />
+              <div className="relative">
+                <header className="mb-6">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                      <BarChart3 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">Account Information</h2>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Live details synced from your Clerk profile
+                      </p>
+                    </div>
+                  </div>
+                </header>
+                <dl className="space-y-4">
+                  {accountDetails.map(({ label, value, isMono, isSensitive }) => {
+                    const display = value ?? 'Not set'
+                    const isPlaceholder = display === 'Not set' || display === ''
+                    const valueClass = [
+                      'text-sm leading-6',
+                      isMono ? 'font-mono text-[13px] text-gray-700' : 'font-medium text-gray-900',
+                      isPlaceholder ? 'font-normal italic text-gray-400' : '',
+                      isSensitive && !showSensitiveInfo ? 'text-gray-500' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')
+
+                    return (
+                      <div
+                        key={label}
+                        className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4 last:border-0"
+                      >
+                        <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+                          {label}
+                        </dt>
+                        <dd className={valueClass}>{display || '—'}</dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              </div>
+            </div>
+
+            {/* Database Profile Card */}
+            <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md">
+              <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-purple-50 to-pink-50 opacity-50 blur-2xl" />
+              <div className="relative">
+                <header className="mb-6">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
+                      <Hash className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">Database Profile</h2>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Your Omni Write record stored in our database
+                      </p>
+                    </div>
+                  </div>
+                </header>
+                {error ? (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700">
+                    {error}
+                  </div>
+                ) : databaseDetails.length ? (
+                  <dl className="space-y-4">
+                    {databaseDetails.map(({ label, value, isMono, isSensitive }) => {
+                      const display = value ?? 'Not set'
+                      const isPlaceholder = display === 'Not set' || display === ''
+                      const valueClass = [
+                        'text-sm leading-6',
+                        isMono ? 'font-mono text-[13px] text-gray-700' : 'font-medium text-gray-900',
+                        isPlaceholder ? 'font-normal italic text-gray-400' : '',
+                        isSensitive && !showSensitiveInfo ? 'text-gray-500' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')
+
+                      return (
+                        <div
+                          key={label}
+                          className="flex items-start justify-between gap-4 border-b border-gray-100 pb-4 last:border-0"
+                        >
+                          <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+                            {label}
+                          </dt>
+                          <dd className={valueClass}>{display || '—'}</dd>
+                        </div>
+                      )
+                    })}
+                  </dl>
+                ) : (
+                  <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/70 p-6 text-center text-sm text-gray-500">
+                    Profile not synced to the database yet. This usually resolves a few moments after signup.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* X Connection Section */}
+          <section className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md lg:p-8">
+            <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-indigo-50 to-purple-50 opacity-50 blur-2xl" />
+            <div className="relative">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600">
+                    <MessageCircle className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">X (Twitter) Connection</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Connect your account to queue posts directly from Omni Write
+                    </p>
+                  </div>
+                </div>
+                {xConnection ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 text-sm font-semibold text-gray-700 border border-blue-100">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      @{connectionHandle}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={disconnectTwitter}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={connectTwitter}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Connect Account
+                  </button>
+                )}
+              </div>
+
+              {xConnection && (
+                <div className="mt-8 grid gap-8 lg:grid-cols-2">
+                  {/* Compose Section */}
+                  <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-gray-50/50 p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-base font-semibold text-gray-900">
+                          Compose {composeMode === 'tweet' ? 'Tweet' : 'Thread'}
+                        </h4>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Draft a post and choose when it should go live
+                        </p>
+                      </div>
+                      <div className="inline-flex rounded-full border border-gray-200 bg-white p-1 shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => setComposeMode('tweet')}
+                          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                            composeMode === 'tweet'
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          Tweet
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setComposeMode('thread')}
+                          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                            composeMode === 'thread'
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          Thread
+                        </button>
+                      </div>
+                    </div>
+
+                    {composeMode === 'tweet' ? (
+                      <form onSubmit={submitSchedule} className="flex flex-col gap-4">
+                        <textarea
+                          value={composeText}
+                          onChange={(e) => setComposeText(e.target.value)}
+                          rows={6}
+                          className="w-full resize-none rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                          placeholder="What would you like to share?"
+                        />
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                          <input
+                            type="datetime-local"
+                            value={scheduleAt}
+                            onChange={(e) => setScheduleAt(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                          />
+                          <button
+                            type="submit"
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
+                            disabled={!composeText || !scheduleAt}
+                          >
+                            <Send className="h-4 w-4" />
+                            Schedule Tweet
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <form onSubmit={submitThreadSchedule} className="flex flex-col gap-4">
+                        <div className="space-y-3">
+                          {threadTweets.map((tweet, index) => (
+                            <div key={index} className="flex gap-2">
+                              <div className="flex flex-col items-center gap-2 pt-4">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-xs font-bold text-indigo-700">
+                                  {index + 1}
+                                </div>
+                                {index < threadTweets.length - 1 && (
+                                  <div className="h-full w-0.5 flex-1 bg-gray-200" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <textarea
+                                  value={tweet}
+                                  onChange={(e) => updateThreadTweet(index, e.target.value)}
+                                  rows={3}
+                                  className="w-full resize-none rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-900 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                  placeholder={`Tweet ${index + 1}`}
+                                />
+                              </div>
+                              {threadTweets.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeThreadTweet(index)}
+                                  className="mt-3 h-8 w-8 rounded-full border border-gray-300 text-gray-400 transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-600"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addThreadTweet}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700"
+                        >
+                          + Add Tweet
+                        </button>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                          <input
+                            type="datetime-local"
+                            value={scheduleAt}
+                            onChange={(e) => setScheduleAt(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                          />
+                          <button
+                            type="submit"
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
+                            disabled={!scheduleAt || threadTweets.every(t => !t.trim())}
+                          >
+                            <Send className="h-4 w-4" />
+                            Schedule Thread
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+
+                  {/* Scheduled Posts Section */}
+                  <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-gray-50/50 p-6">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-base font-semibold text-gray-900">Scheduled Posts</h4>
+                        <p className="mt-1 text-sm text-gray-500">
+                          A quick look at everything queued from Omni Write
+                        </p>
+                      </div>
+                    </div>
+                    {scheduled.length === 0 && scheduledThreads.length === 0 ? (
+                      <div className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white p-8 text-center">
+                        <div>
+                          <Calendar className="mx-auto h-12 w-12 text-gray-300" />
+                          <h3 className="mt-4 text-sm font-semibold text-gray-900">No posts scheduled</h3>
+                          <p className="mt-2 text-sm text-gray-500">
+                            Nothing scheduled yet. Your upcoming posts will appear here.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <ul className="space-y-3">
+                        {scheduled.map((s) => {
+                          const badgeClass = statusStyles[s.status] || 'bg-gray-100 text-gray-600'
+                          const badgeLabel = statusLabels[s.status] || s.status
+                          const StatusIcon = s.status === 'POSTED' ? CheckCircle : s.status === 'QUEUED' ? Clock : MessageCircle
+
+                          return (
+                            <li
+                              key={`tweet-${s.id}`}
+                              className="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+                            >
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-start gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                                    s.status === 'POSTED' ? 'bg-green-100 text-green-600' :
+                                    s.status === 'QUEUED' ? 'bg-blue-100 text-blue-600' :
+                                    'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    <StatusIcon className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                      <span className="inline-flex items-center rounded-md bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                                        Tweet
+                                      </span>
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass}`}
+                                      >
+                                        {badgeLabel}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm font-medium leading-relaxed text-gray-900">
+                                      {s.text || <span className="italic text-gray-400">No content</span>}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    {formatDateTime(s.scheduledAt)}
+                                  </span>
+                                  {s.status === 'QUEUED' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelScheduled(s.id)}
+                                      className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          )
+                        })}
+                        {scheduledThreads.map((t) => {
+                          const badgeClass = statusStyles[t.status] || 'bg-gray-100 text-gray-600'
+                          const badgeLabel = statusLabels[t.status] || t.status
+                          const StatusIcon = t.status === 'POSTED' ? CheckCircle : t.status === 'QUEUED' ? Clock : MessageCircle
+
+                          return (
+                            <li
+                              key={`thread-${t.id}`}
+                              className="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+                            >
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-start gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                                    t.status === 'POSTED' ? 'bg-green-100 text-green-600' :
+                                    t.status === 'QUEUED' ? 'bg-blue-100 text-blue-600' :
+                                    'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    <StatusIcon className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                      <span className="inline-flex items-center rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                        Thread ({t.tweets?.length || 0})
+                                      </span>
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass}`}
+                                      >
+                                        {badgeLabel}
+                                      </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {(t.tweets || []).slice(0, 2).map((tweet, idx) => (
+                                        <p key={idx} className="text-sm font-medium leading-relaxed text-gray-900">
+                                          {idx + 1}. {tweet.length > 80 ? tweet.substring(0, 80) + '...' : tweet}
+                                        </p>
+                                      ))}
+                                      {t.tweets && t.tweets.length > 2 && (
+                                        <p className="text-xs italic text-gray-500">
+                                          + {t.tweets.length - 2} more tweet{t.tweets.length - 2 !== 1 ? 's' : ''}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    {formatDateTime(t.scheduledAt)}
+                                  </span>
+                                  {t.status === 'QUEUED' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelScheduledThread(t.id)}
+                                      className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
   )
 }
 
