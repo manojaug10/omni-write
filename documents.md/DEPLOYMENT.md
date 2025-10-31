@@ -409,4 +409,231 @@ railway up
 
 ---
 
-**Last Updated:** October 24, 2025
+---
+
+## Currently Deployed Features
+
+### Phase 1: Authentication & User Management ✅
+- Clerk authentication with sign-in/sign-up flows
+- User profile management
+- Protected routes
+- User database sync via webhooks
+
+### Phase 2: X (Twitter) API Integration (45% Complete) ✅
+**OAuth & Connection Management:**
+- OAuth 2.0 with PKCE authentication
+- Connect/disconnect X accounts
+- Token refresh mechanism
+- Rate limit handling
+
+**Single Tweet Features:**
+- Post immediate tweets
+- Schedule tweets for future posting
+- View scheduled tweets list
+- Cancel scheduled tweets (before posting)
+- Delete published tweets (after posting)
+
+**Thread Posting Features (Added October 30, 2025):**
+- Post immediate threads (multi-tweet)
+- Schedule threads for future posting
+- Background auto-posting of threads
+- Thread chaining with `in_reply_to_tweet_id`
+- View scheduled threads list
+- Cancel scheduled threads (before posting)
+
+**Backend Implementation:**
+- `postThread()` service method with reply chaining
+- `ScheduledThread` database model
+- Thread scheduling API endpoints
+- Background job processor (`processDueThreads()`)
+
+**Frontend Implementation:**
+- Toggle UI (Tweet/Thread modes)
+- Thread composition with numbered inputs
+- Add/remove tweet functionality
+- Visual thread connectors
+- Scheduled threads display
+
+### Phase 4: Scheduling System (85% Complete) ✅
+- Background job system (30-second interval)
+- Status tracking (QUEUED, POSTED, FAILED, CANCELLED)
+- Auto-post tweets and threads at scheduled time
+- Error handling and retry logic
+- Complete scheduling UI
+
+---
+
+## Production Environment Variables
+
+### Backend (Railway) - Updated
+
+Add these environment variables in Railway dashboard:
+
+```env
+# Database
+DATABASE_URL=postgresql://postgres:password@host:5432/postgres?pgbouncer=true
+DIRECT_DATABASE_URL=postgresql://postgres:password@host:5432/postgres
+
+# Authentication
+CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+CLERK_WEBHOOK_SECRET=whsec_...
+
+# X (Twitter) API
+X_CLIENT_ID=your_x_client_id
+X_CLIENT_SECRET=your_x_client_secret
+X_REDIRECT_URI=https://your-backend-url.railway.app/api/x/callback
+X_DEFAULT_SCOPES=tweet.read tweet.write users.read offline.access
+
+# Caching
+REDIS_URL=redis://redis-host:port
+
+# Server
+PORT=3000
+NODE_ENV=production
+```
+
+**Important Notes:**
+- `DIRECT_DATABASE_URL` is required for Prisma migrations (without pgbouncer)
+- `CLERK_WEBHOOK_SECRET` is required for user sync
+- X API credentials are required for social media posting
+- All X scopes are necessary for full functionality
+
+---
+
+## API Endpoints Reference
+
+### Authentication
+- `POST /api/webhooks/clerk` - Clerk user sync webhook
+
+### User Management
+- `GET /api/users/me` - Get current user profile
+- `PATCH /api/users/me` - Update user profile
+- `DELETE /api/users/me` - Delete user account
+
+### X (Twitter) Integration
+
+**OAuth:**
+- `GET /api/x/authorize` - Start X OAuth flow
+- `GET /api/x/callback` - OAuth callback handler
+- `GET /api/x/profile` - Get X user profile
+- `GET /api/social-connections` - List connected accounts
+- `DELETE /api/social-connections/X` - Disconnect X account
+
+**Single Tweets:**
+- `POST /api/x/tweet` - Post immediate tweet
+- `POST /api/x/tweet/schedule` - Schedule a tweet
+- `GET /api/x/tweet/schedule` - List scheduled tweets
+- `DELETE /api/x/tweet/schedule/:id` - Cancel scheduled tweet
+- `DELETE /api/x/tweet/:id` - Delete published tweet
+
+**Thread Posting:**
+- `POST /api/x/thread` - Post immediate thread
+- `POST /api/x/thread/schedule` - Schedule a thread
+- `GET /api/x/thread/schedule` - List scheduled threads
+- `DELETE /api/x/thread/schedule/:id` - Cancel scheduled thread
+
+---
+
+## Database Schema
+
+### Core Models
+
+**User:**
+```prisma
+model User {
+  id              String            @id @default(cuid())
+  clerkId         String            @unique
+  email           String            @unique
+  name            String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  connections     SocialConnection[]
+  scheduledTweets ScheduledTweet[]
+  scheduledThreads ScheduledThread[]
+}
+```
+
+**SocialConnection:**
+```prisma
+model SocialConnection {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  provider     String
+  accessToken  String   @db.Text
+  refreshToken String?  @db.Text
+  expiresAt    DateTime?
+  providerUserId String?
+  providerUsername String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, provider])
+}
+```
+
+**ScheduledTweet:**
+```prisma
+model ScheduledTweet {
+  id           String              @id @default(cuid())
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  provider     String              @default("X")
+  text         String              @db.Text
+  scheduledAt  DateTime
+  status       ScheduledTweetStatus @default(QUEUED)
+  postedTweetId String?
+  errorMessage String?             @db.Text
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+```
+
+**ScheduledThread:**
+```prisma
+model ScheduledThread {
+  id             String                @id @default(cuid())
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  provider       String                @default("X")
+  tweets         String[]              // Array of tweet texts
+  scheduledAt    DateTime
+  status         ScheduledThreadStatus @default(QUEUED)
+  postedThreadId String?               // First tweet ID
+  postedTweetIds String[]              // All tweet IDs
+  errorMessage   String?               @db.Text
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+}
+```
+
+---
+
+## Background Jobs
+
+The backend runs two background jobs on a 30-second interval:
+
+**1. Process Scheduled Tweets (`processDueTweets`)**
+- Checks for tweets with `scheduledAt <= now()`
+- Posts tweets using X API
+- Updates status to POSTED or FAILED
+- Stores `postedTweetId` on success
+
+**2. Process Scheduled Threads (`processDueThreads`)**
+- Checks for threads with `scheduledAt <= now()`
+- Posts threads using X API with reply chaining
+- Updates status to POSTED or FAILED
+- Stores `postedThreadId` and `postedTweetIds` array on success
+
+**Job Configuration:**
+```javascript
+// backend/src/server.js
+setInterval(async () => {
+  await processScheduledTweets();
+}, 30 * 1000); // Every 30 seconds
+```
+
+---
+
+**Last Updated:** October 30, 2025
