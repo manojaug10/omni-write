@@ -1,7 +1,7 @@
 # Omni Write - Quick Status Summary
 
-**Last Updated:** October 25, 2025  
-**Overall Completion:** 22% (2.0 out of 9 phases)
+**Last Updated:** October 30, 2025
+**Overall Completion:** 30% (2.7 out of 9 phases)
 
 ---
 
@@ -9,10 +9,10 @@
 
 ```
 Phase 0: Setup & Foundation         ████████████████████ 100% COMPLETE
-Phase 1: Authentication & Core UI   ████████░░░░░░░░░░░░  40% IN PROGRESS
-Phase 2: Social Media OAuth         ░░░░░░░░░░░░░░░░░░░░   0% NOT STARTED
+Phase 1: Authentication & Core UI   ████████████████████  99% COMPLETE
+Phase 2: Social Media OAuth         █████████░░░░░░░░░░░  45% IN PROGRESS
 Phase 3: Basic Post Composer        ░░░░░░░░░░░░░░░░░░░░   0% NOT STARTED
-Phase 4: Scheduling System          ░░░░░░░░░░░░░░░░░░░░   0% NOT STARTED
+Phase 4: Scheduling System          █████████████████░░░  85% IN PROGRESS
 Phase 5: AI Content Generation      ░░░░░░░░░░░░░░░░░░░░   0% NOT STARTED
 Phase 6: Analytics & Metrics        ░░░░░░░░░░░░░░░░░░░░   0% NOT STARTED
 Phase 7: Advanced Features          ░░░░░░░░░░░░░░░░░░░░   0% NOT STARTED
@@ -33,55 +33,119 @@ Phase 9: MVP Launch                 ░░░░░░░░░░░░░░�
 - Deployment pipelines: Vercel (frontend) + Railway (backend)
 - Environment variables and .env templates created
 
-### Phase 1 - Authentication (40% Complete)
+### Phase 1 - Authentication (99% Complete)
 **What Works:**
-- Clerk provider integrated in React
-- Frontend sign-in/sign-up buttons (Clerk modals)
-- User button for account management
-- Clerk webhook endpoint for user sync (POST /api/webhooks/clerk)
-- User service layer with database CRUD operations
-- Webhook signature verification with Svix
-- User.created, user.updated, user.deleted event handlers
-- Comprehensive logging and error handling
+- ✅ Clerk provider integrated in React
+- ✅ Complete authentication flow (sign-in, sign-up, sign-out)
+- ✅ Protected route wrapper component
+- ✅ User profile page with Clerk data
+- ✅ User API endpoints (GET/PATCH/DELETE /api/users/me)
+- ✅ Clerk webhook endpoint for user sync
+- ✅ User service layer with database CRUD
+- ✅ Navigation bar with conditional rendering
+- ✅ Error boundary component
+- ✅ Landing page (modern redesign)
+- ✅ Production deployment (Railway + Vercel)
 
 **What's Missing:**
-- Dashboard page and layout
-- Protected route wrapper component
-- User profile endpoints (GET/PATCH /api/users/me)
-- Navigation sidebar
-- Settings page
-- JWT authentication middleware
-- Application pages structure
+- Dashboard page and layout (partially complete via profile page)
+
+### Phase 2 - Social Media OAuth (45% Complete)
+**What Works:**
+- ✅ X (Twitter) OAuth 2.0 with PKCE
+- ✅ OAuth connection management (connect/disconnect)
+- ✅ Token storage and refresh mechanism
+- ✅ X API integration (profile, posting)
+- ✅ Rate limit handling
+- ✅ Social connection UI in profile page
+
+**What's Missing:**
+- LinkedIn OAuth
+- Meta (Facebook/Instagram/Threads) OAuth
+- TikTok OAuth
+
+### Phase 4 - Scheduling System (85% Complete)
+**What Works:**
+- ✅ ScheduledTweet database model
+- ✅ ScheduledThread database model
+- ✅ Schedule tweet API endpoints
+- ✅ Schedule thread API endpoints
+- ✅ Background job system (30-second interval)
+- ✅ Auto-post tweets at scheduled time
+- ✅ Auto-post threads at scheduled time
+- ✅ Status tracking (QUEUED, POSTED, FAILED, CANCELLED)
+- ✅ Cancel scheduled items (no API call)
+- ✅ Error handling and retry logic
+- ✅ Complete frontend UI for scheduling
+- ✅ Thread composition UI with toggle
+- ✅ Scheduled posts/threads list display
+
+**What's Missing:**
+- Calendar view component
+- Drag-and-drop rescheduling
+- Bull Queue with Redis (using simple interval for MVP)
 
 ---
 
 ## What's Not Done
 
-### Phases 2-9 (0% Complete)
-- Social Media OAuth (X, LinkedIn, Meta, Instagram, TikTok)
-- Post composer and content creation
-- Scheduling system with Bull queue
+### Phase 2 - Social Media OAuth (55% Remaining)
+- LinkedIn OAuth integration
+- Meta (Facebook/Instagram/Threads) OAuth
+- TikTok OAuth integration
+
+### Phase 3 - Basic Post Composer (0% Complete)
+- Rich post composer component
+- Platform-specific formatting
+- Media upload (images, videos)
+- Draft management
+
+### Phase 4 - Scheduling System (15% Remaining)
+- Calendar view component
+- Drag-and-drop rescheduling
+- Bull Queue migration (optional)
+
+### Phase 5-9 (0% Complete)
 - AI content generation with Claude API
 - Analytics and metrics collection
 - Advanced features (hashtags, folders, gamification)
 - Testing and quality assurance
-- Production deployment
+- Final launch preparation
 
 ---
 
 ## Key Files
 
-**Backend:**
-- `/backend/src/server.js` - Express app entry point
-- `/backend/src/routes/webhook.routes.js` - Clerk webhook handler
-- `/backend/src/services/user.service.js` - User database operations
-- `/backend/prisma/schema.prisma` - Database schema (User model only)
+**Backend - Core:**
+- `/backend/src/server.js` - Express app entry point with background jobs
+- `/backend/prisma/schema.prisma` - Database schema (User, SocialConnection, ScheduledTweet, ScheduledThread)
 
-**Frontend:**
+**Backend - Routes:**
+- `/backend/src/routes/webhook.routes.js` - Clerk webhook handler
+- `/backend/src/routes/user.routes.js` - User API endpoints
+- `/backend/src/routes/x.routes.js` - X OAuth & posting endpoints (15 endpoints)
+
+**Backend - Services:**
+- `/backend/src/services/user.service.js` - User database operations
+- `/backend/src/services/x.service.js` - X API integration (OAuth, posting, threads)
+- `/backend/src/services/socialConnection.service.js` - Social connection CRUD
+- `/backend/src/services/scheduledTweet.service.js` - Scheduled tweet CRUD
+- `/backend/src/services/scheduledThread.service.js` - Scheduled thread CRUD
+
+**Backend - Jobs:**
+- `/backend/src/jobs/processScheduledTweets.js` - Background jobs (tweets + threads)
+
+**Frontend - Pages:**
 - `/frontend/src/main.jsx` - React app with ClerkProvider
-- `/frontend/src/App.jsx` - Main component with login/auth UI
-- `/frontend/src/index.css` - Tailwind styles
-- `/frontend/vite.config.js` - Vite configuration
+- `/frontend/src/App.jsx` - Router and navigation
+- `/frontend/src/pages/LandingPage.jsx` - Modern landing page
+- `/frontend/src/pages/ProfilePage.jsx` - Profile with X integration & scheduling UI
+- `/frontend/src/pages/SignInPage.jsx` - Sign-in page
+- `/frontend/src/pages/SignUpPage.jsx` - Sign-up page
+
+**Frontend - Components:**
+- `/frontend/src/components/ProtectedRoute.jsx` - Route protection
+- `/frontend/src/components/ErrorBoundary.jsx` - Error handling
 
 **Configuration:**
 - `/frontend/vercel.json` - Vercel deployment config
@@ -89,10 +153,11 @@ Phase 9: MVP Launch                 ░░░░░░░░░░░░░░�
 - `/backend/Procfile` - Process command for Railway
 
 **Documentation:**
-- `/CLAUDE.md` - Development progress log
-- `/Omni_Write_Progress_Tracker.md` - Full roadmap
-- `/CODEBASE_ANALYSIS.md` - This detailed analysis
-- `/DEPLOYMENT.md` - Deployment guide
+- `/CLAUDE.md` - Development progress log (deprecated)
+- `/Omni_Write_Progress_Tracker.md` - Main progress tracker
+- `/documents.md/QUICK_STATUS.md` - This quick status
+- `/documents.md/FEATURE_CHECKLIST.md` - Detailed task checklist
+- `/documents.md/DEPLOYMENT.md` - Deployment guide
 
 ---
 
@@ -150,23 +215,49 @@ Phase 9: MVP Launch                 ░░░░░░░░░░░░░░�
 
 ## Time Estimate
 
-- **Completed:** ~10 hours (Phase 0)
-- **In Progress:** ~15 hours (Phase 1, 40% done)
-- **Remaining:** ~130-170 hours (Phases 2-9)
+- **Completed:** ~25 hours (Phases 0, 1 complete; Phase 2: 45%; Phase 4: 85%)
+- **Remaining:** ~125-175 hours (Phases 2-9 completion)
 - **Total MVP Time:** ~150-200 hours
-- **At 15-20 hrs/week:** 10-13 weeks to completion
+- **At 15-20 hrs/week:** 6-9 weeks to completion (from now)
 
 ---
 
 ## Repository Status
 
 - **Current Branch:** main
-- **Recent Commits:** 10 commits focused on Clerk integration
-- **Active Issue:** Phase 1 completion (authentication pages)
+- **Recent Commits:** 15+ commits (X OAuth, scheduled tweets/threads, thread UI)
+- **Latest Commit:** `c9d88f3` - "feat: Add thread posting UI to profile page"
+- **Active Work:** Phase 2 (Social OAuth) & Phase 4 (Scheduling System)
 - **GitHub:** https://github.com/manojaug10/omni-write
-- **Last Update:** October 25, 2025
+- **Last Update:** October 30, 2025
 
 ---
 
-For detailed analysis, see **CODEBASE_ANALYSIS.md**
+## X API Feature Summary
+
+**Implemented Features:**
+- ✅ OAuth 2.0 with PKCE (connect/disconnect)
+- ✅ Post single tweet (immediate)
+- ✅ Post thread (immediate with reply chaining)
+- ✅ Schedule single tweet
+- ✅ Schedule thread
+- ✅ List scheduled tweets/threads
+- ✅ Cancel scheduled items (no API call)
+- ✅ Delete published tweet
+- ✅ Token refresh mechanism
+- ✅ Background auto-posting (30-second interval)
+- ✅ Rate limit handling
+- ✅ Error tracking and status updates
+
+**Not Implemented:**
+- ❌ Delete entire thread
+- ❌ Edit tweets/threads
+- ❌ Media attachments (images, videos)
+- ❌ Polls
+- ❌ Quote tweets
+- ❌ Analytics/metrics fetching
+
+---
+
+For detailed analysis, see **Omni_Write_Progress_Tracker.md**
 
