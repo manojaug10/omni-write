@@ -2,6 +2,7 @@ const prisma = require('../lib/prisma');
 
 const PROVIDERS = {
   X: 'X',
+  THREADS: 'THREADS',
 };
 
 /**

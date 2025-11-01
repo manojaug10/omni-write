@@ -35,6 +35,111 @@ Omni Write is a full-stack writing/content management application built with a m
 
 ## Development Progress
 
+### Session 6 - November 1, 2025
+
+#### ✅ Threads API Integration
+**Status:** Completed November 1, 2025
+
+**What was accomplished:**
+
+1. **Threads Service Implementation**
+   - Created complete Threads API service with correct endpoints
+   - OAuth 2.0 authorization URL generation
+   - Automatic short-lived to long-lived token exchange (1 hour → 60 days)
+   - Token refresh mechanism for long-lived tokens
+   - User profile fetching from Threads API
+   - Post creation (text, image, video support)
+   - Post deletion capability
+   - Comprehensive rate limit handling
+
+2. **API Endpoints Created**
+   - `GET /api/auth/threads` - Initiate Threads OAuth flow
+   - `GET /api/auth/threads/callback` - Handle OAuth callback
+   - `GET /api/threads/connection` - Get user's Threads connection
+   - `DELETE /api/threads/connection` - Disconnect Threads account
+   - `POST /api/threads/refresh` - Manual token refresh
+   - `GET /api/threads/me` - Get Threads profile
+   - `POST /api/threads/post` - Create immediate post
+   - `DELETE /api/threads/post/:id` - Delete post
+   - `POST /api/threads/post/schedule` - Schedule a post
+   - `GET /api/threads/post/schedule` - List scheduled posts
+   - `DELETE /api/threads/post/schedule/:id` - Cancel scheduled post
+
+3. **Background Job Integration**
+   - Added `processDueThreadsPosts()` function
+   - Automatically publishes scheduled Threads posts
+   - Runs every 30 seconds alongside X tweet processing
+   - Updates post status (QUEUED → POSTED/FAILED)
+   - Stores posted IDs and error messages
+
+4. **Key Technical Features**
+   - **Two-Step Post Creation:** Media container creation → publish
+   - **Automatic Token Management:** Short-lived → long-lived exchange
+   - **Provider-Agnostic Design:** Reuses ScheduledTweet model
+   - **Rate Limit Awareness:** 250 posts/24h, 100 deletions/24h
+   - **Security:** State validation, unique constraints, token encryption
+
+5. **Comprehensive Documentation**
+   - **THREADS_INTEGRATION.md** (4,000+ words)
+     - Complete API reference with examples
+     - OAuth flow explanation
+     - Token management guide
+     - Rate limits documentation
+     - Testing procedures
+     - Troubleshooting guide
+   - **THREADS_SETUP.md** (Quick setup checklist)
+     - Step-by-step Meta Developer Console setup
+     - Environment variable configuration
+     - Local testing with ngrok
+     - Production deployment guide
+   - **THREADS_IMPLEMENTATION_SUMMARY.md**
+     - Technical decisions explained
+     - Architecture diagram
+     - Performance considerations
+     - Comparison with competitors
+
+**Files created:**
+- `backend/src/routes/threads.routes.js` - Threads API routes (313 lines)
+- `backend/src/services/threads.service.js` - Threads service layer (287 lines)
+- `THREADS_INTEGRATION.md` - Complete API documentation
+- `THREADS_SETUP.md` - Setup guide
+- `THREADS_IMPLEMENTATION_SUMMARY.md` - Implementation details
+
+**Files modified:**
+- `backend/src/server.js` - Registered threads routes, added background job
+- `backend/src/jobs/processScheduledTweets.js` - Added Threads post processing
+- `backend/src/services/socialConnection.service.js` - Added PROVIDERS.THREADS
+- `backend/src/services/scheduledTweet.service.js` - Already supported provider field
+
+**Git commits:**
+- "feat: Add complete Threads API integration with OAuth and scheduling" (8162bfb)
+
+**Environment variables required:**
+```bash
+THREADS_APP_ID=your_threads_app_id
+THREADS_APP_SECRET=your_threads_app_secret
+THREADS_REDIRECT_URI=https://yourdomain.com/api/auth/threads/callback
+THREADS_DEFAULT_SCOPES=threads_basic,threads_content_publish
+THREADS_SUCCESS_REDIRECT_URI=https://yourdomain.com/dashboard?threads=connected
+THREADS_FAILURE_REDIRECT_URI=https://yourdomain.com/settings?threads=error
+```
+
+**Key differences from X integration:**
+- OAuth URL: `https://threads.net/oauth/authorize` (not Twitter)
+- API Base: `https://graph.threads.net/v1.0` (not Twitter API v2)
+- Token type: Long-lived tokens (60 days) vs refresh tokens
+- Rate limits: 250 posts/24h (vs 50 for X Free tier)
+- Post creation: Two-step process (container → publish)
+
+**Next steps:**
+1. Set up Threads app in Meta Developer Console
+2. Configure environment variables in Railway
+3. Test OAuth flow end-to-end
+4. Build frontend UI for Threads integration
+5. Add token refresh background job (cron)
+
+---
+
 ### Session 5 - October 27, 2025 (Later)
 
 #### ✅ Landing Page Redesign

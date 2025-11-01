@@ -5,6 +5,7 @@ import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
 import ProfilePage from './pages/ProfilePage'
 import DashboardPage from './pages/DashboardPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -26,6 +27,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route
           path="/dashboard"
           element={

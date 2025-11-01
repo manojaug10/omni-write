@@ -5,7 +5,9 @@ const healthRoutes = require('./routes/health.routes');
 const userRoutes = require('./routes/user.routes');
 const webhookRoutes = require('./routes/webhook.routes');
 const xRoutes = require('./routes/x.routes');
-const { processDueTweets, processDueThreads } = require('./jobs/processScheduledTweets');
+const threadsRoutes = require('./routes/threads.routes');
+const { processDueTweets, processDueThreads, processDueThreadsPosts } = require('./jobs/processScheduledTweets');
+const { refreshExpiringThreadsTokens, cleanupExpiredTokens } = require('./jobs/refreshTokens');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +45,7 @@ app.get('/api/health', (req, res) => {
 // Protected user routes
 app.use('/api/users', userRoutes);
 app.use('/api', xRoutes);
+app.use('/api', threadsRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -85,5 +88,26 @@ setInterval(() => {
   processDueThreads().catch((e) => {
     console.error('Scheduled threads processing error:', e);
   });
+  processDueThreadsPosts().catch((e) => {
+    console.error('Scheduled Threads posts processing error:', e);
+  });
 }, SCHEDULE_INTERVAL_MS);
+
+// Background job: refresh Threads tokens daily (runs every 24 hours)
+const TOKEN_REFRESH_INTERVAL_MS = Number(process.env.TOKEN_REFRESH_INTERVAL_MS || 24 * 60 * 60 * 1000);
+setInterval(() => {
+  refreshExpiringThreadsTokens().catch((e) => {
+    console.error('Token refresh error:', e);
+  });
+  cleanupExpiredTokens().catch((e) => {
+    console.error('Token cleanup error:', e);
+  });
+}, TOKEN_REFRESH_INTERVAL_MS);
+
+// Run token refresh once on startup (after 10 seconds delay)
+setTimeout(() => {
+  refreshExpiringThreadsTokens().catch((e) => {
+    console.error('Initial token refresh error:', e);
+  });
+}, 10000);
 

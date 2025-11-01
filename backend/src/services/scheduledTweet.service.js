@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma');
 
-async function createScheduledTweet(userId, text, scheduledAt) {
+async function createScheduledTweet(userId, text, scheduledAt, provider = 'X') {
   if (!userId || !text || !scheduledAt) {
     throw new Error('userId, text and scheduledAt are required');
   }
@@ -9,6 +9,7 @@ async function createScheduledTweet(userId, text, scheduledAt) {
       userId,
       text,
       scheduledAt: new Date(scheduledAt),
+      provider,
     },
   });
 }

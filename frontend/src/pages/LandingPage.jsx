@@ -475,7 +475,12 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-6">
             <span className="cursor-pointer transition hover:text-white">Status</span>
-            <span className="cursor-pointer transition hover:text-white">Privacy</span>
+            <span
+              onClick={() => navigate('/privacy')}
+              className="cursor-pointer transition hover:text-white"
+            >
+              Privacy
+            </span>
             <span className="cursor-pointer transition hover:text-white">Support</span>
           </div>
         </div>
