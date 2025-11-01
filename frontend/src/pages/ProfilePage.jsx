@@ -295,6 +295,13 @@ function ProfilePage() {
   const [scheduledThreads, setScheduledThreads] = useState([])
   const [scheduledThreadsPosts, setScheduledThreadsPosts] = useState([])
 
+  // Threads advanced features state
+  const [threadsMediaType, setThreadsMediaType] = useState('TEXT')
+  const [threadsMediaUrl, setThreadsMediaUrl] = useState('')
+  const [threadsTopicTag, setThreadsTopicTag] = useState('')
+  const [threadsLinkAttachment, setThreadsLinkAttachment] = useState('')
+  const [threadsGifId, setThreadsGifId] = useState('')
+
   const displayName = useMemo(() => {
     if (!user) {
       return ''
@@ -550,7 +557,32 @@ function ProfilePage() {
       const localDate = new Date(scheduleAt)
       const isoWithTimezone = localDate.toISOString()
 
-      const body = { text: composeText, scheduledAt: isoWithTimezone }
+      const body = {
+        text: composeText,
+        scheduledAt: isoWithTimezone,
+        mediaType: threadsMediaType,
+      }
+
+      // Add optional fields
+      if (threadsMediaUrl && (threadsMediaType === 'IMAGE' || threadsMediaType === 'VIDEO')) {
+        body.mediaUrl = threadsMediaUrl
+      }
+
+      if (threadsTopicTag) {
+        body.topicTag = threadsTopicTag
+      }
+
+      if (threadsLinkAttachment && threadsMediaType === 'TEXT') {
+        body.linkAttachment = threadsLinkAttachment
+      }
+
+      if (threadsGifId && threadsMediaType === 'TEXT') {
+        body.gifAttachment = {
+          gifId: threadsGifId,
+          provider: 'TENOR'
+        }
+      }
+
       const resp = await fetch(`${API_BASE_URL}/api/threads/post/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -560,6 +592,11 @@ function ProfilePage() {
       if (resp.ok) {
         setComposeText('')
         setScheduleAt('')
+        setThreadsMediaType('TEXT')
+        setThreadsMediaUrl('')
+        setThreadsTopicTag('')
+        setThreadsLinkAttachment('')
+        setThreadsGifId('')
         setBanner({ type: 'success', message: 'Threads post scheduled.' })
         loadScheduledThreadsPosts()
       } else {
@@ -569,7 +606,7 @@ function ProfilePage() {
     } catch (e) {
       setBanner({ type: 'error', message: e.message || 'Failed to schedule Threads post.' })
     }
-  }, [composeText, scheduleAt, getToken, loadScheduledThreadsPosts])
+  }, [composeText, scheduleAt, threadsMediaType, threadsMediaUrl, threadsTopicTag, threadsLinkAttachment, threadsGifId, getToken, loadScheduledThreadsPosts])
 
   const cancelScheduledThreadsPost = useCallback(async (id) => {
     try {
@@ -947,6 +984,49 @@ function ProfilePage() {
 
                     {composeProvider === 'THREADS' ? (
                       <form onSubmit={submitThreadsPostSchedule} className="flex flex-col gap-4">
+                        {/* Media Type Selector */}
+                        <div>
+                          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Post Type
+                          </label>
+                          <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => setThreadsMediaType('TEXT')}
+                              className={`rounded-lg px-4 py-2 text-xs font-semibold transition ${
+                                threadsMediaType === 'TEXT'
+                                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Text
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setThreadsMediaType('IMAGE')}
+                              className={`rounded-lg px-4 py-2 text-xs font-semibold transition ${
+                                threadsMediaType === 'IMAGE'
+                                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Image
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setThreadsMediaType('VIDEO')}
+                              className={`rounded-lg px-4 py-2 text-xs font-semibold transition ${
+                                threadsMediaType === 'VIDEO'
+                                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Video
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Text Content */}
                         <textarea
                           value={composeText}
                           onChange={(e) => setComposeText(e.target.value)}
@@ -954,6 +1034,80 @@ function ProfilePage() {
                           className="w-full resize-none rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
                           placeholder="What would you like to share on Threads?"
                         />
+
+                        {/* Media URL (for IMAGE/VIDEO) */}
+                        {(threadsMediaType === 'IMAGE' || threadsMediaType === 'VIDEO') && (
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">
+                              {threadsMediaType === 'IMAGE' ? 'Image' : 'Video'} URL
+                            </label>
+                            <input
+                              type="url"
+                              value={threadsMediaUrl}
+                              onChange={(e) => setThreadsMediaUrl(e.target.value)}
+                              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                              placeholder={`https://example.com/${threadsMediaType === 'IMAGE' ? 'image.jpg' : 'video.mp4'}`}
+                            />
+                          </div>
+                        )}
+
+                        {/* Topic Tag (Hashtag) */}
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-gray-700">
+                            Topic Tag (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={threadsTopicTag}
+                            onChange={(e) => setThreadsTopicTag(e.target.value)}
+                            maxLength={50}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                            placeholder="WebDevelopment (no # symbol needed, 1-50 chars)"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            {threadsTopicTag.length}/50 characters. No periods or ampersands.
+                          </p>
+                        </div>
+
+                        {/* Link Attachment (TEXT only) */}
+                        {threadsMediaType === 'TEXT' && (
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">
+                              Link Attachment (Optional)
+                            </label>
+                            <input
+                              type="url"
+                              value={threadsLinkAttachment}
+                              onChange={(e) => setThreadsLinkAttachment(e.target.value)}
+                              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                              placeholder="https://example.com/article"
+                            />
+                            <p className="mt-1 text-xs text-gray-500">
+                              Add a rich preview link card (TEXT posts only)
+                            </p>
+                          </div>
+                        )}
+
+                        {/* GIF Attachment (TEXT only) */}
+                        {threadsMediaType === 'TEXT' && (
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-700">
+                              Tenor GIF ID (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={threadsGifId}
+                              onChange={(e) => setThreadsGifId(e.target.value)}
+                              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                              placeholder="12345678 (Tenor GIF ID)"
+                            />
+                            <p className="mt-1 text-xs text-gray-500">
+                              Find GIF IDs on Tenor.com (TEXT posts only)
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Schedule Date/Time and Submit */}
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                           <input
                             type="datetime-local"

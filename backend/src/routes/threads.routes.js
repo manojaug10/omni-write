@@ -215,17 +215,80 @@ router.delete('/threads/connection', requireAuth, async (req, res) => {
 // POST /api/threads/post - create Threads post immediately
 router.post('/threads/post', requireAuth, async (req, res) => {
   try {
-    const { text, mediaUrl } = req.body || {};
-    if (!text || typeof text !== 'string') return res.status(400).json({ error: 'MissingText' });
+    const { text, mediaUrl, mediaType, topicTag, linkAttachment, gifAttachment } = req.body || {};
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'MissingText' });
+    }
+
     const dbUser = await userService.findUserByClerkId(req.auth.userId);
     if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+
     const connection = await getConnectionByUserId(dbUser.id, PROVIDERS.THREADS);
     if (!connection) return res.status(404).json({ error: 'ThreadsConnectionNotFound' });
-    const result = await threadsService.createPost(connection.accessToken, text, mediaUrl);
+
+    // Build options object
+    const options = {
+      text,
+      mediaUrl,
+      mediaType: mediaType || 'TEXT',
+      topicTag,
+      linkAttachment,
+      gifAttachment,
+    };
+
+    const result = await threadsService.createPost(connection.accessToken, options);
     return res.status(201).json(result);
   } catch (e) {
     console.error('Threads create post error:', e);
     return res.status(500).json({ error: 'ThreadsPostFailed', message: e.message });
+  }
+});
+
+// POST /api/threads/carousel - create Threads carousel post (2-20 items)
+router.post('/threads/carousel', requireAuth, async (req, res) => {
+  try {
+    const { items, text, topicTag } = req.body || {};
+
+    // Validate items array
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: 'MissingItems', message: 'items must be an array' });
+    }
+
+    if (items.length < 2) {
+      return res.status(400).json({ error: 'InvalidItems', message: 'Carousel requires at least 2 items' });
+    }
+
+    if (items.length > 20) {
+      return res.status(400).json({ error: 'InvalidItems', message: 'Carousel can have maximum 20 items' });
+    }
+
+    // Validate each item has mediaUrl (carousel items must have media)
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i].mediaUrl) {
+        return res.status(400).json({
+          error: 'InvalidItems',
+          message: `Item ${i + 1} is missing required 'mediaUrl' field`
+        });
+      }
+    }
+
+    const dbUser = await userService.findUserByClerkId(req.auth.userId);
+    if (!dbUser) return res.status(404).json({ error: 'UserNotFound' });
+
+    const connection = await getConnectionByUserId(dbUser.id, PROVIDERS.THREADS);
+    if (!connection) return res.status(404).json({ error: 'ThreadsConnectionNotFound' });
+
+    // Build options object
+    const options = {};
+    if (text) options.text = text;
+    if (topicTag) options.topicTag = topicTag;
+
+    const result = await threadsService.createCarousel(connection.accessToken, items, options);
+    return res.status(201).json(result);
+  } catch (e) {
+    console.error('Threads create carousel error:', e);
+    return res.status(500).json({ error: 'ThreadsCarouselFailed', message: e.message });
   }
 });
 

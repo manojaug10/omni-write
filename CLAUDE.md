@@ -60,6 +60,7 @@ Omni Write is a full-stack writing/content management application built with a m
    - `POST /api/threads/refresh` - Manual token refresh
    - `GET /api/threads/me` - Get Threads profile
    - `POST /api/threads/post` - Create immediate post
+   - `POST /api/threads/carousel` - Create carousel post (2-20 items) ✨ NEW
    - `DELETE /api/threads/post/:id` - Delete post
    - `POST /api/threads/post/schedule` - Schedule a post
    - `GET /api/threads/post/schedule` - List scheduled posts
@@ -98,7 +99,67 @@ Omni Write is a full-stack writing/content management application built with a m
      - Performance considerations
      - Comparison with competitors
 
+6. **Carousel Posts Feature** ✨ NEW (Added November 1, 2025)
+   - Implemented Threads carousel posting (multi-item posts)
+   - Created `createCarousel()` service function
+   - Added `POST /api/threads/carousel` endpoint
+   - Support for 2-20 items per carousel
+   - Each item must have image or video (TEXT not allowed)
+   - Carousel-level text and topic tag support
+   - Atomic publishing (all items or none)
+   - Comprehensive validation and error handling
+   - Created comparison documentation: **THREADS_VS_X_COMPARISON.md**
+
+7. **Advanced Posting Features** ✨ NEW (Added November 1, 2025)
+   - **Topic Tags (Hashtags):**
+     - Added `topicTag` parameter to `createPost()` and `createCarousel()`
+     - 1-50 character limit enforced
+     - Validation: no periods (.) or ampersands (&)
+     - Works with all post types (TEXT, IMAGE, VIDEO, CAROUSEL)
+   - **Link Attachments:**
+     - Added `linkAttachment` parameter for TEXT posts only
+     - Displays rich preview card on Threads
+     - Must be publicly accessible HTTPS URL
+     - Validation: TEXT-only restriction enforced
+   - **GIF Attachments:**
+     - Added `gifAttachment` object for TEXT posts only
+     - Supports Tenor GIFs (provider: TENOR)
+     - Requires Tenor GIF ID from Tenor API
+     - Validation: TEXT-only restriction enforced
+   - **Updated `createPost()` function:**
+     - Now accepts options object instead of positional parameters
+     - Backward compatible with legacy signature (text, mediaUrl, mediaType)
+     - Supports all advanced features
+   - **Complete media specifications:**
+     - Images: JPEG/PNG, 8MB max, 10:1 aspect ratio
+     - Videos: MP4/MOV, 1GB max, 5 minutes max, H264/HEVC
+   - Created comprehensive documentation: **THREADS_ADVANCED_FEATURES.md**
+
+**Key Differences: X Threads vs Threads Carousels**
+- **X Threads:** Sequential tweets connected by replies (unlimited length)
+- **Threads Carousels:** Single post with 2-20 swipeable items (atomic publishing)
+- **X:** Each tweet is a separate post with individual engagement
+- **Threads:** All items in one post, shared engagement
+- **See:** `THREADS_VS_X_COMPARISON.md` for complete comparison
+
+**New Features Summary:**
+| Feature | Single Posts | Carousels |
+|---------|-------------|-----------|
+| Topic Tags | ✅ | ✅ |
+| Link Attachments | ✅ TEXT only | ❌ |
+| GIF Attachments | ✅ TEXT only | ❌ |
+| Images/Videos | ✅ | ✅ Required |
+
 **Files created:**
+- `THREADS_VS_X_COMPARISON.md` - Complete comparison guide ✨ NEW
+- `THREADS_CAROUSEL_USAGE.md` - Carousel quick start guide ✨ NEW
+- `THREADS_ADVANCED_FEATURES.md` - Complete features documentation ✨ NEW
+
+**Files modified (advanced features):**
+- `backend/src/services/threads.service.js` - Enhanced `createPost()` and `createCarousel()` ✨
+- `backend/src/routes/threads.routes.js` - Updated routes to accept new parameters ✨
+
+**Original files created:**
 - `backend/src/routes/threads.routes.js` - Threads API routes (313 lines)
 - `backend/src/services/threads.service.js` - Threads service layer (287 lines)
 - `THREADS_INTEGRATION.md` - Complete API documentation
