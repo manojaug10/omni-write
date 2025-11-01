@@ -33,6 +33,7 @@ model SocialConnection {
   accessTokenExpiresAt DateTime?
   refreshToken         String?   @db.Text
   username             String?
+  metadata             Json?     // Store provider-specific data (e.g., subscription_type for X)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
