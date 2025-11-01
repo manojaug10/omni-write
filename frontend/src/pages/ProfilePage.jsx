@@ -290,8 +290,10 @@ function ProfilePage() {
   const [scheduleAt, setScheduleAt] = useState('')
   const [scheduled, setScheduled] = useState([])
   const [composeMode, setComposeMode] = useState('tweet') // 'tweet' or 'thread'
+  const [composeProvider, setComposeProvider] = useState('X') // 'X' or 'THREADS'
   const [threadTweets, setThreadTweets] = useState(['', ''])
   const [scheduledThreads, setScheduledThreads] = useState([])
+  const [scheduledThreadsPosts, setScheduledThreadsPosts] = useState([])
 
   const displayName = useMemo(() => {
     if (!user) {
@@ -453,11 +455,42 @@ function ProfilePage() {
     }
   }, [getToken])
 
+  const loadScheduledThreadsPosts = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/threads/post/schedule`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        setScheduledThreadsPosts(data.scheduled || [])
+      }
+    } catch (err) {
+      console.error('Failed to load scheduled Threads posts', err)
+    }
+  }, [getToken])
+
   useEffect(() => {
     if (xConnection) {
       loadScheduledThreads()
     }
   }, [xConnection, loadScheduledThreads])
+
+  useEffect(() => {
+    if (threadsConnection) {
+      loadScheduledThreadsPosts()
+    }
+  }, [threadsConnection, loadScheduledThreadsPosts])
+
+  // Auto-select provider based on available connections
+  useEffect(() => {
+    if (!xConnection && threadsConnection) {
+      setComposeProvider('THREADS')
+    } else if (xConnection && !threadsConnection) {
+      setComposeProvider('X')
+    }
+  }, [xConnection, threadsConnection])
 
   const submitThreadSchedule = useCallback(async (e) => {
     e.preventDefault()
@@ -509,6 +542,50 @@ function ProfilePage() {
       console.error('Failed to cancel scheduled thread', err)
     }
   }, [getToken, loadScheduledThreads])
+
+  const submitThreadsPostSchedule = useCallback(async (e) => {
+    e.preventDefault()
+    try {
+      const token = await getToken()
+      const localDate = new Date(scheduleAt)
+      const isoWithTimezone = localDate.toISOString()
+
+      const body = { text: composeText, scheduledAt: isoWithTimezone }
+      const resp = await fetch(`${API_BASE_URL}/api/threads/post/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      })
+      if (resp.ok) {
+        setComposeText('')
+        setScheduleAt('')
+        setBanner({ type: 'success', message: 'Threads post scheduled.' })
+        loadScheduledThreadsPosts()
+      } else {
+        const data = await resp.json().catch(() => null)
+        setBanner({ type: 'error', message: data?.message || 'Failed to schedule Threads post.' })
+      }
+    } catch (e) {
+      setBanner({ type: 'error', message: e.message || 'Failed to schedule Threads post.' })
+    }
+  }, [composeText, scheduleAt, getToken, loadScheduledThreadsPosts])
+
+  const cancelScheduledThreadsPost = useCallback(async (id) => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/threads/post/schedule/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        loadScheduledThreadsPosts()
+      }
+    } catch (err) {
+      console.error('Failed to cancel scheduled Threads post', err)
+    }
+  }, [getToken, loadScheduledThreadsPosts])
 
   const addThreadTweet = useCallback(() => {
     setThreadTweets([...threadTweets, ''])
@@ -789,46 +866,112 @@ function ProfilePage() {
                 )}
               </div>
 
-              {xConnection && (
+              {(xConnection || threadsConnection) && (
                 <div className="mt-8 grid gap-8 lg:grid-cols-2">
                   {/* Compose Section */}
                   <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-gray-50/50 p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-base font-semibold text-gray-900">
-                          Compose {composeMode === 'tweet' ? 'Tweet' : 'Thread'}
-                        </h4>
-                        <p className="mt-1 text-sm text-gray-500">
-                          Draft a post and choose when it should go live
-                        </p>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-base font-semibold text-gray-900">
+                            Compose Post
+                          </h4>
+                          <p className="mt-1 text-sm text-gray-500">
+                            Draft a post and choose when it should go live
+                          </p>
+                        </div>
                       </div>
-                      <div className="inline-flex rounded-full border border-gray-200 bg-white p-1 shadow-sm">
-                        <button
-                          type="button"
-                          onClick={() => setComposeMode('tweet')}
-                          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                            composeMode === 'tweet'
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                              : 'text-gray-600 hover:text-gray-900'
-                          }`}
-                        >
-                          Tweet
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setComposeMode('thread')}
-                          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                            composeMode === 'thread'
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                              : 'text-gray-600 hover:text-gray-900'
-                          }`}
-                        >
-                          Thread
-                        </button>
-                      </div>
+
+                      {/* Provider Selector */}
+                      {xConnection && threadsConnection && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Platform:</span>
+                          <div className="inline-flex rounded-full border border-gray-200 bg-white p-1 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => setComposeProvider('X')}
+                              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                                composeProvider === 'X'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              X (Twitter)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setComposeProvider('THREADS')}
+                              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                                composeProvider === 'THREADS'
+                                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Threads
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Mode Selector (only for X) */}
+                      {composeProvider === 'X' && xConnection && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Type:</span>
+                          <div className="inline-flex rounded-full border border-gray-200 bg-white p-1 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => setComposeMode('tweet')}
+                              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                                composeMode === 'tweet'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Tweet
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setComposeMode('thread')}
+                              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                                composeMode === 'thread'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Thread
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {composeMode === 'tweet' ? (
+                    {composeProvider === 'THREADS' ? (
+                      <form onSubmit={submitThreadsPostSchedule} className="flex flex-col gap-4">
+                        <textarea
+                          value={composeText}
+                          onChange={(e) => setComposeText(e.target.value)}
+                          rows={6}
+                          className="w-full resize-none rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                          placeholder="What would you like to share on Threads?"
+                        />
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                          <input
+                            type="datetime-local"
+                            value={scheduleAt}
+                            onChange={(e) => setScheduleAt(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200 sm:w-auto"
+                          />
+                          <button
+                            type="submit"
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
+                            disabled={!composeText || !scheduleAt}
+                          >
+                            <Send className="h-4 w-4" />
+                            Schedule Threads Post
+                          </button>
+                        </div>
+                      </form>
+                    ) : composeMode === 'tweet' ? (
                       <form onSubmit={submitSchedule} className="flex flex-col gap-4">
                         <textarea
                           value={composeText}
@@ -928,7 +1071,7 @@ function ProfilePage() {
                         </p>
                       </div>
                     </div>
-                    {scheduled.length === 0 && scheduledThreads.length === 0 ? (
+                    {scheduled.length === 0 && scheduledThreads.length === 0 && scheduledThreadsPosts.length === 0 ? (
                       <div className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white p-8 text-center">
                         <div>
                           <Calendar className="mx-auto h-12 w-12 text-gray-300" />
@@ -1048,6 +1191,60 @@ function ProfilePage() {
                                       type="button"
                                       onClick={() => cancelScheduledThread(t.id)}
                                       className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          )
+                        })}
+                        {scheduledThreadsPosts.map((tp) => {
+                          const badgeClass = statusStyles[tp.status] || 'bg-gray-100 text-gray-600'
+                          const badgeLabel = statusLabels[tp.status] || tp.status
+                          const StatusIcon = tp.status === 'POSTED' ? CheckCircle : tp.status === 'QUEUED' ? Clock : MessageCircle
+
+                          return (
+                            <li
+                              key={`threads-post-${tp.id}`}
+                              className="group rounded-xl border border-purple-200 bg-white p-4 shadow-sm transition hover:border-purple-300 hover:shadow-md"
+                            >
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-start gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                                    tp.status === 'POSTED' ? 'bg-green-100 text-green-600' :
+                                    tp.status === 'QUEUED' ? 'bg-purple-100 text-purple-600' :
+                                    'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    <StatusIcon className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                      <span className="inline-flex items-center rounded-md bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                                        Threads Post
+                                      </span>
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass}`}
+                                      >
+                                        {badgeLabel}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm font-medium leading-relaxed text-gray-900">
+                                      {tp.text || <span className="italic text-gray-400">No content</span>}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    {formatDateTime(tp.scheduledAt)}
+                                  </span>
+                                  {tp.status === 'QUEUED' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelScheduledThreadsPost(tp.id)}
+                                      className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2"
                                     >
                                       Cancel
                                     </button>
