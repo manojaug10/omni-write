@@ -84,11 +84,15 @@ router.get('/auth/x/callback', async (req, res) => {
     const me = await xService.getMe(accessToken);
     const providerUserId = me && me.data && me.data.id;
     const username = me && me.data && (me.data.username || me.data.name);
+    const subscriptionType = me && me.data && me.data.subscription_type;
     if (!providerUserId) {
       throw new Error('Unable to fetch X user profile');
     }
 
     const accessTokenExpiresAt = typeof expiresIn === 'number' ? new Date(Date.now() + expiresIn * 1000) : null;
+
+    // Store subscription_type in metadata for determining character limits
+    const metadata = subscriptionType ? { subscription_type: subscriptionType } : null;
 
     let connection;
     try {
@@ -100,6 +104,7 @@ router.get('/auth/x/callback', async (req, res) => {
         accessTokenExpiresAt,
         refreshToken,
         username: username || null,
+        metadata,
       });
     } catch (e) {
       // Unique constraint violation: this X account is already linked to a different Omni Write user

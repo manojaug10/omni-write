@@ -87,7 +87,8 @@ function authHeaders(accessToken) {
 }
 
 async function getMe(accessToken) {
-  const url = `${X_API_BASE}/users/me`;
+  // Request user fields including subscription_type to determine account tier
+  const url = `${X_API_BASE}/users/me?user.fields=id,name,username,subscription_type`;
   const response = await axios.get(url, {
     headers: authHeaders(accessToken),
     validateStatus: () => true,

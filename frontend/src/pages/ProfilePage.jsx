@@ -302,9 +302,6 @@ function ProfilePage() {
   const [threadsLinkAttachment, setThreadsLinkAttachment] = useState('')
   const [threadsGifId, setThreadsGifId] = useState('')
 
-  // X account tier for character limits
-  const [xAccountTier, setXAccountTier] = useState('basic') // 'basic', 'premium', 'premium+'
-
   // Character limit constants
   const THREADS_CHAR_LIMIT = 500
   const X_CHAR_LIMITS = {
@@ -312,6 +309,20 @@ function ProfilePage() {
     premium: 4000,
     'premium+': 25000
   }
+
+  // Automatically detect X account tier from connection data
+  // For now, default to 'basic'. This will be enhanced to read from X API user data
+  const xAccountTier = useMemo(() => {
+    if (!xConnection?.metadata) return 'basic'
+
+    // Try to get subscription type from X API user metadata
+    // The X API can return subscription_type in user.fields
+    const subscriptionType = xConnection.metadata.subscription_type
+
+    if (subscriptionType === 'premium_plus') return 'premium+'
+    if (subscriptionType === 'premium') return 'premium'
+    return 'basic'
+  }, [xConnection])
 
   // Helper function to get character count color
   const getCharCountColor = (currentCount, limit) => {
@@ -1152,48 +1163,6 @@ function ProfilePage() {
                       </form>
                     ) : composeMode === 'tweet' ? (
                       <form onSubmit={submitSchedule} className="flex flex-col gap-4">
-                        {/* X Account Tier Selector */}
-                        <div>
-                          <label className="mb-2 block text-xs font-medium text-gray-700">
-                            X Account Type
-                          </label>
-                          <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
-                            <button
-                              type="button"
-                              onClick={() => setXAccountTier('basic')}
-                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
-                                xAccountTier === 'basic'
-                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              Basic (280)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setXAccountTier('premium')}
-                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
-                                xAccountTier === 'premium'
-                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              Premium (4K)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setXAccountTier('premium+')}
-                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
-                                xAccountTier === 'premium+'
-                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              Premium+ (25K)
-                            </button>
-                          </div>
-                        </div>
-
                         <div>
                           <textarea
                             value={composeText}
@@ -1225,48 +1194,6 @@ function ProfilePage() {
                       </form>
                     ) : (
                       <form onSubmit={submitThreadSchedule} className="flex flex-col gap-4">
-                        {/* X Account Tier Selector for Thread */}
-                        <div>
-                          <label className="mb-2 block text-xs font-medium text-gray-700">
-                            X Account Type
-                          </label>
-                          <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
-                            <button
-                              type="button"
-                              onClick={() => setXAccountTier('basic')}
-                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
-                                xAccountTier === 'basic'
-                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              Basic (280)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setXAccountTier('premium')}
-                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
-                                xAccountTier === 'premium'
-                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              Premium (4K)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setXAccountTier('premium+')}
-                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
-                                xAccountTier === 'premium+'
-                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              Premium+ (25K)
-                            </button>
-                          </div>
-                        </div>
-
                         <div className="space-y-3">
                           {threadTweets.map((tweet, index) => (
                             <div key={index} className="flex gap-2">
