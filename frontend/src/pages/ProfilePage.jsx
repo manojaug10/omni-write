@@ -243,8 +243,23 @@ function ProfilePage() {
   const connectThreads = useCallback(async () => {
     try {
       const token = await getToken()
-      // Initiate Threads OAuth - backend will redirect to Threads authorization
-      window.location.href = `${API_BASE_URL}/api/auth/threads?token=${encodeURIComponent(token)}`
+      const redirect = `${window.location.origin}/profile`
+      const url = `${API_BASE_URL}/api/auth/threads?mode=json&redirect=${encodeURIComponent(redirect)}`
+      const resp = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+      })
+      if (!resp.ok) {
+        throw new Error('Failed to initiate Threads OAuth')
+      }
+      const data = await resp.json()
+      if (!data.authorizationUrl) {
+        throw new Error('Missing authorization URL')
+      }
+      window.location.href = data.authorizationUrl
     } catch (e) {
       console.error('Connect Threads failed:', e)
       setBanner({ type: 'error', message: e.message || 'Unable to start Threads OAuth.' })
