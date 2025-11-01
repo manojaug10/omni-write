@@ -69,6 +69,7 @@ function ProfilePage() {
   const [error, setError] = useState(null)
   const [banner, setBanner] = useState(null)
   const [xConnection, setXConnection] = useState(null)
+  const [threadsConnection, setThreadsConnection] = useState(null)
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false)
 
   const fetchUserFromDB = useCallback(async () => {
@@ -128,17 +129,39 @@ function ProfilePage() {
     }
   }, [getToken])
 
+  const fetchThreadsConnection = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/threads/connection`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        setThreadsConnection(data.connection)
+      } else {
+        setThreadsConnection(null)
+      }
+    } catch (err) {
+      console.error('Failed to fetch Threads connection', err)
+      setThreadsConnection(null)
+    }
+  }, [getToken])
+
   useEffect(() => {
     if (isLoaded && user) {
       fetchXConnection()
+      fetchThreadsConnection()
     }
-  }, [isLoaded, user, fetchXConnection])
+  }, [isLoaded, user, fetchXConnection, fetchThreadsConnection])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const status = params.get('x_oauth')
+    const xStatus = params.get('x_oauth')
+    const threadsStatus = params.get('threads')
     const message = params.get('message')
-    if (status === 'success') {
+
+    if (xStatus === 'success') {
       setBanner({ type: 'success', message: 'Twitter account connected successfully.' })
       fetchXConnection()
       // Clean the query params
@@ -146,14 +169,30 @@ function ProfilePage() {
       url.searchParams.delete('x_oauth')
       url.searchParams.delete('message')
       window.history.replaceState({}, '', url.toString())
-    } else if (status === 'error') {
+    } else if (xStatus === 'error') {
       setBanner({ type: 'error', message: message || 'Failed to connect Twitter account.' })
       const url = new URL(window.location.href)
       url.searchParams.delete('x_oauth')
       url.searchParams.delete('message')
       window.history.replaceState({}, '', url.toString())
     }
-  }, [fetchXConnection])
+
+    if (threadsStatus === 'connected') {
+      setBanner({ type: 'success', message: 'Threads account connected successfully.' })
+      fetchThreadsConnection()
+      // Clean the query params
+      const url = new URL(window.location.href)
+      url.searchParams.delete('threads')
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    } else if (threadsStatus === 'error') {
+      setBanner({ type: 'error', message: message || 'Failed to connect Threads account.' })
+      const url = new URL(window.location.href)
+      url.searchParams.delete('threads')
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [fetchXConnection, fetchThreadsConnection])
 
   const connectTwitter = useCallback(async () => {
     try {
@@ -198,6 +237,37 @@ function ProfilePage() {
       }
     } catch (e) {
       setBanner({ type: 'error', message: e.message || 'Failed to disconnect Twitter.' })
+    }
+  }, [getToken])
+
+  const connectThreads = useCallback(async () => {
+    try {
+      const token = await getToken()
+      // Initiate Threads OAuth - backend will redirect to Threads authorization
+      window.location.href = `${API_BASE_URL}/api/auth/threads?token=${encodeURIComponent(token)}`
+    } catch (e) {
+      console.error('Connect Threads failed:', e)
+      setBanner({ type: 'error', message: e.message || 'Unable to start Threads OAuth.' })
+    }
+  }, [getToken])
+
+  const disconnectThreads = useCallback(async () => {
+    try {
+      const token = await getToken()
+      const resp = await fetch(`${API_BASE_URL}/api/threads/connection`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      })
+      if (resp.ok) {
+        setBanner({ type: 'success', message: 'Threads account disconnected.' })
+        setThreadsConnection(null)
+      } else {
+        const data = await resp.json().catch(() => null)
+        setBanner({ type: 'error', message: data?.message || 'Failed to disconnect Threads.' })
+      }
+    } catch (e) {
+      setBanner({ type: 'error', message: e.message || 'Failed to disconnect Threads.' })
     }
   }, [getToken])
 
@@ -975,6 +1045,58 @@ function ProfilePage() {
                       </ul>
                     )}
                   </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Threads Connection Section */}
+          <section className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md lg:p-8">
+            <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-purple-50 to-pink-50 opacity-50 blur-2xl" />
+            <div className="relative">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600">
+                    <Hash className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Threads Connection</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Connect your Threads account to schedule posts
+                    </p>
+                  </div>
+                </div>
+                {threadsConnection ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2 text-sm font-semibold text-gray-700 border border-purple-100">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      @{threadsConnection.username || threadsConnection.providerUserId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={disconnectThreads}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={connectThreads}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:ring-offset-2"
+                  >
+                    <Hash className="h-4 w-4" />
+                    Connect Threads
+                  </button>
+                )}
+              </div>
+
+              {threadsConnection && (
+                <div className="mt-6 rounded-xl border border-purple-100 bg-purple-50/30 p-4">
+                  <p className="text-sm text-gray-700">
+                    ✓ Your Threads account is connected. You can now schedule Threads posts from the dashboard.
+                  </p>
                 </div>
               )}
             </div>
