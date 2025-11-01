@@ -16,6 +16,7 @@ async function upsertConnection({
   accessTokenExpiresAt,
   refreshToken = null,
   username = null,
+  metadata = null,
 }) {
   if (!userId || !provider || !providerUserId || !accessToken) {
     throw new Error('Missing required fields to upsert social connection');
@@ -35,6 +36,7 @@ async function upsertConnection({
       accessTokenExpiresAt,
       refreshToken,
       username,
+      metadata,
       user: {
         connect: { id: userId },
       },
@@ -45,6 +47,7 @@ async function upsertConnection({
       accessTokenExpiresAt,
       refreshToken,
       username,
+      metadata,
     },
   });
 }

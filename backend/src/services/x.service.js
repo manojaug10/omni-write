@@ -116,7 +116,15 @@ async function postTweet(accessToken, text) {
     throw new Error(`Rate limited by X API (limit=${limit}, reset=${reset})`);
   }
   if (response.status !== 201) {
-    throw new Error(`X /tweets failed: ${response.status}`);
+    // Extract detailed error information from X API response
+    const errorDetail = response.data?.detail || response.data?.title || response.data?.error || JSON.stringify(response.data);
+    console.error('X API postTweet error:', {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data,
+      text: text
+    });
+    throw new Error(`X /tweets failed (${response.status}): ${errorDetail}`);
   }
   return response.data;
 }
@@ -172,7 +180,15 @@ async function postThread(accessToken, tweets) {
     }
 
     if (response.status !== 201) {
-      throw new Error(`X /tweets failed at tweet ${i + 1}: ${response.status}`);
+      // Extract detailed error information from X API response
+      const errorDetail = response.data?.detail || response.data?.title || response.data?.error || JSON.stringify(response.data);
+      console.error(`X API postThread error at tweet ${i + 1}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+        text: text
+      });
+      throw new Error(`X /tweets failed at tweet ${i + 1} (${response.status}): ${errorDetail}`);
     }
 
     const tweetData = response.data;
