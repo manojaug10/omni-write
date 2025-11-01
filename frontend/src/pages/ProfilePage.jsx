@@ -302,6 +302,26 @@ function ProfilePage() {
   const [threadsLinkAttachment, setThreadsLinkAttachment] = useState('')
   const [threadsGifId, setThreadsGifId] = useState('')
 
+  // X account tier for character limits
+  const [xAccountTier, setXAccountTier] = useState('basic') // 'basic', 'premium', 'premium+'
+
+  // Character limit constants
+  const THREADS_CHAR_LIMIT = 500
+  const X_CHAR_LIMITS = {
+    basic: 280,
+    premium: 4000,
+    'premium+': 25000
+  }
+
+  // Helper function to get character count color
+  const getCharCountColor = (currentCount, limit) => {
+    const percentage = (currentCount / limit) * 100
+    if (currentCount > limit) return 'text-rose-600 font-semibold'
+    if (percentage > 95) return 'text-rose-500 font-medium'
+    if (percentage > 80) return 'text-amber-500'
+    return 'text-gray-500'
+  }
+
   const displayName = useMemo(() => {
     if (!user) {
       return ''
@@ -1027,13 +1047,18 @@ function ProfilePage() {
                         </div>
 
                         {/* Text Content */}
-                        <textarea
-                          value={composeText}
-                          onChange={(e) => setComposeText(e.target.value)}
-                          rows={6}
-                          className="w-full resize-none rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
-                          placeholder="What would you like to share on Threads?"
-                        />
+                        <div>
+                          <textarea
+                            value={composeText}
+                            onChange={(e) => setComposeText(e.target.value)}
+                            rows={6}
+                            className="w-full resize-none rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-sm transition focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                            placeholder="What would you like to share on Threads?"
+                          />
+                          <p className={`mt-1 text-xs text-right ${getCharCountColor(composeText.length, THREADS_CHAR_LIMIT)}`}>
+                            {composeText.length} / {THREADS_CHAR_LIMIT} characters
+                          </p>
+                        </div>
 
                         {/* Media URL (for IMAGE/VIDEO) */}
                         {(threadsMediaType === 'IMAGE' || threadsMediaType === 'VIDEO') && (
@@ -1127,13 +1152,60 @@ function ProfilePage() {
                       </form>
                     ) : composeMode === 'tweet' ? (
                       <form onSubmit={submitSchedule} className="flex flex-col gap-4">
-                        <textarea
-                          value={composeText}
-                          onChange={(e) => setComposeText(e.target.value)}
-                          rows={6}
-                          className="w-full resize-none rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                          placeholder="What would you like to share?"
-                        />
+                        {/* X Account Tier Selector */}
+                        <div>
+                          <label className="mb-2 block text-xs font-medium text-gray-700">
+                            X Account Type
+                          </label>
+                          <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => setXAccountTier('basic')}
+                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                                xAccountTier === 'basic'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Basic (280)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setXAccountTier('premium')}
+                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                                xAccountTier === 'premium'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Premium (4K)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setXAccountTier('premium+')}
+                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                                xAccountTier === 'premium+'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Premium+ (25K)
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <textarea
+                            value={composeText}
+                            onChange={(e) => setComposeText(e.target.value)}
+                            rows={6}
+                            className="w-full resize-none rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            placeholder="What would you like to share?"
+                          />
+                          <p className={`mt-1 text-xs text-right ${getCharCountColor(composeText.length, X_CHAR_LIMITS[xAccountTier])}`}>
+                            {composeText.length} / {X_CHAR_LIMITS[xAccountTier]} characters
+                          </p>
+                        </div>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                           <input
                             type="datetime-local"
@@ -1153,6 +1225,48 @@ function ProfilePage() {
                       </form>
                     ) : (
                       <form onSubmit={submitThreadSchedule} className="flex flex-col gap-4">
+                        {/* X Account Tier Selector for Thread */}
+                        <div>
+                          <label className="mb-2 block text-xs font-medium text-gray-700">
+                            X Account Type
+                          </label>
+                          <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => setXAccountTier('basic')}
+                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                                xAccountTier === 'basic'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Basic (280)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setXAccountTier('premium')}
+                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                                xAccountTier === 'premium'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Premium (4K)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setXAccountTier('premium+')}
+                              className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+                                xAccountTier === 'premium+'
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Premium+ (25K)
+                            </button>
+                          </div>
+                        </div>
+
                         <div className="space-y-3">
                           {threadTweets.map((tweet, index) => (
                             <div key={index} className="flex gap-2">
@@ -1172,6 +1286,9 @@ function ProfilePage() {
                                   className="w-full resize-none rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-900 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                                   placeholder={`Tweet ${index + 1}`}
                                 />
+                                <p className={`mt-1 text-xs text-right ${getCharCountColor(tweet.length, X_CHAR_LIMITS[xAccountTier])}`}>
+                                  {tweet.length} / {X_CHAR_LIMITS[xAccountTier]} characters
+                                </p>
                               </div>
                               {threadTweets.length > 1 && (
                                 <button
