@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omni Write - AI Social Media Scheduler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            color: #2d2d2d;
+            background: #e8e8e8;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: #f5f5f5;
+            border-bottom: 2px solid #d0d0d0;
+            z-index: 1000;
+            padding: 1.5rem 2rem;
+        }
+
+        nav {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #2d2d2d;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .nav-button {
+            background: #2d2d2d;
+            color: #f5f5f5;
+            padding: 0.6rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 #1a1a1a;
+        }
+
+        .nav-button:hover {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1a1a1a;
+        }
+
+        .nav-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #1a1a1a;
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-top: 80px;
+            padding: 4rem 2rem;
+            text-align: center;
+            background: #f5f5f5;
+        }
+
+        .hero-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #ff6b35;
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            margin-bottom: 2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 3px 0 #d94d1a;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+            color: #2d2d2d;
+            letter-spacing: -1px;
+        }
+
+        .hero p {
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+            color: #5a5a5a;
+            line-height: 1.8;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .primary-button {
+            background: #ff6b35;
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            box-shadow: 0 6px 0 #d94d1a;
+        }
+
+        .primary-button:hover {
+            transform: translateY(3px);
+            box-shadow: 0 3px 0 #d94d1a;
+        }
+
+        .primary-button:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #d94d1a;
+        }
+
+        .secondary-button {
+            background: #f5f5f5;
+            color: #2d2d2d;
+            padding: 1rem 2.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border: 2px solid #d0d0d0;
+            transition: all 0.2s;
+            box-shadow: 0 6px 0 #c0c0c0;
+        }
+
+        .secondary-button:hover {
+            transform: translateY(3px);
+            box-shadow: 0 3px 0 #c0c0c0;
+        }
+
+        .secondary-button:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #c0c0c0;
+        }
+
+        /* Section Styles */
+        .section {
+            padding: 4rem 2rem;
+        }
+
+        .section-alt {
+            background: #f5f5f5;
+        }
+
+        .section-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #ff6b35;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d2d2d;
+            letter-spacing: -0.5px;
+        }
+
+        /* Feature Cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 2px solid #d0d0d0;
+            box-shadow: 0 8px 0 #c0c0c0;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .feature-card:hover {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #c0c0c0;
+        }
+
+        .feature-card:active {
+            transform: translateY(8px);
+            box-shadow: 0 0 0 #c0c0c0;
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: #2d2d2d;
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 0 #1a1a1a;
+        }
+
+        .feature-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2d2d2d;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-size: 0.95rem;
+        }
+
+        .feature-card p {
+            color: #5a5a5a;
+            line-height: 1.7;
+            font-size: 0.9rem;
+        }
+
+        .feature-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+        }
+
+        /* Platform Grid */
+        .platforms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .platform-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 2px solid #d0d0d0;
+            box-shadow: 0 6px 0 #c0c0c0;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .platform-card:hover {
+            transform: translateY(3px);
+            box-shadow: 0 3px 0 #c0c0c0;
+        }
+
+        .platform-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .platform-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #2d2d2d;
+        }
+
+        /* Steps */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 2px solid #d0d0d0;
+            box-shadow: 0 6px 0 #c0c0c0;
+            text-align: center;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: #ff6b35;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 5px 0 #d94d1a;
+        }
+
+        .step-card h3 {
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #2d2d2d;
+        }
+
+        .step-card p {
+            color: #5a5a5a;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 5rem 2rem;
+            background: #2d2d2d;
+            color: white;
+            text-align: center;
+        }
+
+        .cta-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cta-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+
+        .cta-section p {
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+            color: #b0b0b0;
+            line-height: 1.8;
+        }
+
+        .cta-badge {
+            display: inline-block;
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            padding: 0.4rem 1rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            margin-top: 1.5rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border: 1px solid rgba(255, 107, 53, 0.4);
+        }
+
+        /* Footer */
+        footer {
+            padding: 2.5rem 2rem;
+            text-align: center;
+            background: #1a1a1a;
+            color: #8a8a8a;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        footer .logo {
+            color: #f5f5f5;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .features-grid,
+            .platforms-grid,
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loading-indicator {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="logo">OMNI WRITE</div>
+            <a href="#waitlist" class="nav-button">Join Beta</a>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <span class="badge">MVP v0.5 • Early Access</span>
+            <h1>AI That Actually Knows Your Voice</h1>
+            <p>Stop copying bland AI content. Omni Write learns your unique writing style from 1000+ accounts, generates posts that sound like you, and schedules them at the perfect time—all in one platform.</p>
+            <div class="hero-buttons">
+                <a href="#waitlist" class="primary-button">Get Early Access</a>
+                <a href="#features" class="secondary-button">Explore Features</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section" id="features">
+        <div class="section-container">
+            <div class="section-header">
+                <div class="section-label">Core Features</div>
+                <h2 class="section-title">Built for Content Creators</h2>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-status"></div>
+                    <div class="feature-icon">🤖</div>
+                    <h3>Voice Learning AI</h3>
+                    <p>Analyzes your previous posts across all platforms to understand your unique writing style, tone, and personality—then generates content that sounds like you.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-status"></div>
+                    <div class="feature-icon">⏰</div>
+                    <h3>Smart Scheduling</h3>
+                    <p>AI analyzes your audience engagement patterns and suggests optimal posting times personalized to your followers. No more guessing.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-status"></div>
+                    <div class="feature-icon">✨</div>
+                    <h3>Content Brainstormer</h3>
+                    <p>Generate fresh content ideas based on your past successful posts using advanced agentic AI. Pick favorites, refine, and perfect.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-status"></div>
+                    <div class="feature-icon">🎯</div>
+                    <h3>Multi-Platform</h3>
+                    <p>Write once, publish everywhere. Schedule to 6 major platforms with platform-specific optimization built in.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-status"></div>
+                    <div class="feature-icon">📊</div>
+                    <h3>Analytics Dashboard</h3>
+                    <p>Track performance with customizable reports. From professional to playful—get insights that match your style.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-status"></div>
+                    <div class="feature-icon">🔥</div>
+                    <h3>Gamified Streaks</h3>
+                    <p>Build your posting streak with Duolingo-style gamification. Turn consistent content creation into a fun habit.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Platforms Section -->
+    <section class="section section-alt">
+        <div class="section-container">
+            <div class="section-header">
+                <div class="section-label">Integrations</div>
+                <h2 class="section-title">Publish Everywhere</h2>
+            </div>
+            
+            <div class="platforms-grid">
+                <div class="platform-card">
+                    <div class="platform-icon">𝕏</div>
+                    <div class="platform-name">X / Twitter</div>
+                </div>
+                <div class="platform-card">
+                    <div class="platform-icon">💼</div>
+                    <div class="platform-name">LinkedIn</div>
+                </div>
+                <div class="platform-card">
+                    <div class="platform-icon">📸</div>
+                    <div class="platform-name">Instagram</div>
+                </div>
+                <div class="platform-card">
+                    <div class="platform-icon">🔵</div>
+                    <div class="platform-name">Facebook</div>
+                </div>
+                <div class="platform-card">
+                    <div class="platform-icon">🧵</div>
+                    <div class="platform-name">Threads</div>
+                </div>
+                <div class="platform-card">
+                    <div class="platform-icon">🎵</div>
+                    <div class="platform-name">TikTok</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="section">
+        <div class="section-container">
+            <div class="section-header">
+                <div class="section-label">Process</div>
+                <h2 class="section-title">How It Works</h2>
+            </div>
+            
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3>Connect Accounts</h3>
+                    <p>Link your social media profiles. Our AI analyzes your writing style from past posts.</p>
+                </div>
+                
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3>Generate Content</h3>
+                    <p>Use AI to generate ideas in your voice, or write from scratch with AI assistance.</p>
+                </div>
+                
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3>Schedule Posts</h3>
+                    <p>Pick optimal times or let AI suggest the best moments to reach your audience.</p>
+                </div>
+                
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <h3>Track Performance</h3>
+                    <p>Monitor results and let AI learn what resonates with your audience.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="waitlist">
+        <div class="cta-content">
+            <h2>Join the Beta Program</h2>
+            <p>Be among the first to experience AI-powered content creation that actually understands you. Limited spots available for MVP launch.</p>
+            <div class="hero-buttons">
+                <a href="https://omni-write.vercel.app" class="primary-button">Request Access</a>
+            </div>
+            <div class="cta-badge">Free for Early Adopters • No Credit Card</div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="logo">OMNI WRITE</div>
+        <p>AI-POWERED SOCIAL MEDIA SCHEDULER</p>
+        <p>MVP v0.5 • IN DEVELOPMENT</p>
+    </footer>
+</body>
+</html>

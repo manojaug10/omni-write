@@ -26,7 +26,7 @@ function HomePage() {
         // Signed Out View - Clean landing
         <div className="text-center max-w-3xl mx-auto px-4">
           <h1 className="text-6xl md:text-7xl font-bold text-gray-900 mb-6">
-            Omni Write
+            Omni Writes
           </h1>
           <p className="text-2xl md:text-3xl text-gray-600 mb-12">
             Your modern writing platform

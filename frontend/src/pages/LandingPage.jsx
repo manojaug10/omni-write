@@ -1,490 +1,155 @@
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
-import {
-  ArrowRight,
-  BarChart3,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Gauge,
-  Layers,
-  LineChart,
-  MessageCircle,
-  PlayCircle,
-  ShieldCheck,
-  Sparkles,
-  Users,
-  Zap,
-} from 'lucide-react'
+import DarkModeToggle from '../components/DarkModeToggle'
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const { isSignedIn } = useUser()
 
   const handleGetStarted = () => {
-    if (isSignedIn) {
-      navigate('/dashboard')
-    } else {
-      navigate('/sign-up')
-    }
+    navigate(isSignedIn ? '/profile' : '/sign-up')
   }
 
   const handleSignIn = () => {
     navigate('/sign-in')
   }
 
-  const statHighlights = [
-    { label: 'Scheduled posts', value: '12k+', change: '+340% QoQ' },
-    { label: 'Average time saved', value: '14h', change: 'per team each month' },
-    { label: 'Teams onboarded', value: '1.8k', change: 'marketing orgs worldwide' },
-  ]
-
-  const featureHighlights = [
-    {
-      icon: Calendar,
-      title: 'Unified Scheduler',
-      description: 'Drag-and-drop calendar for single tweets, threads, and reposts in one streamlined view.',
-      accent: 'from-sky-500 via-blue-500 to-indigo-500',
-    },
-    {
-      icon: BarChart3,
-      title: 'Real-time Insights',
-      description: 'Performance analytics and audience trends refresh instantly so you can adjust quickly.',
-      accent: 'from-indigo-500 via-purple-500 to-pink-500',
-    },
-    {
-      icon: ShieldCheck,
-      title: 'Enterprise-grade Security',
-      description: 'Clerk authentication, OAuth 2.0, and audit trails keep brand accounts locked down.',
-      accent: 'from-emerald-500 via-teal-500 to-cyan-500',
-    },
-    {
-      icon: MessageCircle,
-      title: 'Smart Content Assist',
-      description: 'AI-assisted copy suggestions match your tone and surface trending topics instantly.',
-      accent: 'from-amber-500 via-orange-500 to-rose-500',
-    },
-  ]
-
-  const workflowSteps = [
-    {
-      step: '01',
-      title: 'Connect your brand accounts',
-      description: 'Link X profiles in seconds with OAuth 2.0 and define roles for collaborators.',
-    },
-    {
-      step: '02',
-      title: 'Plan your campaign timeline',
-      description: 'Drop content onto the visual planner, assign owners, and set approval checkpoints.',
-    },
-    {
-      step: '03',
-      title: 'Automate publishing & approvals',
-      description: 'Omni Writes triggers reminders, auto-posts when approved, and pauses when needed.',
-    },
-    {
-      step: '04',
-      title: 'Monitor performance live',
-      description: 'Real-time dashboards track reach, engagement, and suggest next best actions.',
-    },
-  ]
-
-  const automationHighlights = [
-    {
-      icon: Zap,
-      title: 'Workflow Automation',
-      description: 'Sequences cover drafting, approvals, posting, and reporting so nothing slips through.',
-    },
-    {
-      icon: Layers,
-      title: 'Team Collaboration',
-      description: 'Shared workspaces, brand kits, and contextual notes keep everyone aligned.',
-    },
-  ]
-
-  const testimonials = [
-    {
-      quote:
-        'Omni Writes replaced three separate tools and finally gave our team the visibility we needed. Launching campaigns takes half the time now.',
-      name: 'Maya Chen',
-      role: 'Head of Social @ PulseWave',
-      metric: '258% engagement lift',
-    },
-    {
-      quote:
-        'Scheduling threads used to be chaos. The planner and approval flow are so intuitive that freelancers and stakeholders all stay in sync.',
-      name: 'Jordan Reyes',
-      role: 'Content Lead @ Orbit Labs',
-      metric: '6h saved every week',
-    },
-  ]
-
-  const faqs = [
-    {
-      question: 'Can I invite my whole social team?',
-      answer: 'Yes. Unlimited collaborators with custom roles, approval chains, and activity logs.',
-    },
-    {
-      question: 'Do you support media-rich threads?',
-      answer: 'Absolutely. Upload media, reorder tweets, and preview the full thread before scheduling.',
-    },
-    {
-      question: 'How secure is the connection to X?',
-      answer:
-        'We rely on Clerk for authentication, utilize OAuth 2.0, and never store your credentials in plain text.',
-    },
-    {
-      question: 'Is there a free trial?',
-      answer: 'Start free with core scheduling tools, then upgrade only when you need advanced analytics.',
-    },
-  ]
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),transparent_55%)]" />
-
-      <header className="relative z-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/30">
-              <Sparkles className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <span className="block text-xl font-semibold tracking-tight text-slate-100">Omni Writes</span>
-              <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-400">Social OS</span>
-            </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+      {/* Header */}
+      <header className="site-header">
+        <div className="container flex items-center justify-between" style={{ padding: '1.5rem 2rem' }}>
+          <div style={{ fontFamily: '"Space Mono", monospace', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text)' }}>
+            OMNI WRITES
           </div>
-
-          <div className="hidden items-center gap-8 text-sm font-medium text-slate-300 md:flex">
-            <span className="cursor-pointer transition hover:text-white">Platform</span>
-            <span className="cursor-pointer transition hover:text-white">Solutions</span>
-            <span className="cursor-pointer transition hover:text-white">Pricing</span>
-            <span className="cursor-pointer transition hover:text-white">Resources</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {!isSignedIn && (
-              <button
-                onClick={handleSignIn}
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-300 transition hover:text-white"
-              >
-                Sign In
-              </button>
-            )}
-            <button
-              onClick={handleGetStarted}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:scale-[1.02]"
-            >
-              {isSignedIn ? 'Go to Dashboard' : 'Start Free'}
-              <ArrowRight className="h-4 w-4" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <DarkModeToggle />
+            <button aria-label={isSignedIn ? 'Go to Dashboard' : 'Join Beta'} onClick={handleGetStarted} className="btn btn-nav">
+              {isSignedIn ? 'Dashboard' : 'Join Beta'}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10">
-        <section className="mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-28 pt-10 lg:flex-row lg:items-center lg:pb-32 lg:pt-16">
-          <div className="flex-1">
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-400/10 px-4 py-2 text-sm font-semibold text-indigo-200">
-              <PlayCircle className="h-4 w-4" />
-              Launch campaigns that feel curated, not chaotic
-            </div>
+      {/* Hero */}
+      <section className="px-8 text-center" style={{ padding: '5rem 2rem 4rem', background: 'var(--bg-alt)', marginTop: 80 }}>
+        <div className="container-narrow">
+          <span className="badge" style={{ marginBottom: '2rem' }}>MVP v0.5 • Early Access</span>
+          <h1 className="h1" style={{ marginBottom: '1.5rem', animation: 'fadeInUp 0.8s ease-out 0.2s backwards' }}>
+            AI That Actually Knows Your Voice
+          </h1>
+          <p style={{ fontSize: '1.05rem', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '2.5rem', maxWidth: 680, marginLeft: 'auto', marginRight: 'auto', animation: 'fadeInUp 0.8s ease-out 0.4s backwards' }}>
+            Stop copying bland AI content. Omni Write learns your unique writing style from 1000+ accounts, generates posts that sound like you, and schedules them at the perfect time—all in one platform.
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', animation: 'fadeInUp 0.8s ease-out 0.6s backwards' }}>
+            <button aria-label="Get early access to Omni Write" onClick={handleGetStarted} className="btn btn-primary" style={{ padding: '1rem 2.5rem' }}>
+              Get Early Access
+            </button>
+            <button aria-label={isSignedIn ? 'Go to Profile' : 'Explore Features'} onClick={handleSignIn} className="btn btn-secondary" style={{ padding: '1rem 2.5rem' }}>
+              {isSignedIn ? 'Go to Profile' : 'Explore Features'}
+            </button>
+          </div>
+        </div>
+      </section>
 
-            <h1 className="text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
-              The social media mission control for bold, fast-moving teams.
-            </h1>
-
-            <p className="mt-6 text-lg text-slate-300 sm:text-xl">
-              Connect your X accounts, orchestrate threads, and automate approvals from one beautiful dashboard.
-              Omni Writes keeps your campaign cadence sharp while the analytics guide every iteration.
-            </p>
-
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <button
-                onClick={handleGetStarted}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-base font-semibold text-slate-900 shadow-lg shadow-indigo-500/30 transition hover:-translate-y-0.5 hover:shadow-xl"
-              >
-                {isSignedIn ? 'Open Dashboard' : 'Create Free Account'}
-                <ArrowRight className="h-4 w-4" />
-              </button>
-              {!isSignedIn && (
-                <button
-                  onClick={handleSignIn}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 px-6 py-3 text-base font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
-                >
-                  Preview the Planner
-                </button>
-              )}
-            </div>
-
-            <div className="mt-10 flex flex-wrap gap-6 text-sm text-slate-400">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                No credit card required
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                Secure OAuth 2.0 connection
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                Cancel anytime
-              </div>
-            </div>
+      {/* Features */}
+      <section className="px-8" id="features" style={{ padding: '5rem 2rem', background: 'var(--bg)' }}>
+        <div className="container">
+          <div className="text-center" style={{ marginBottom: '4rem' }}>
+            <div className="section-label" style={{ marginBottom: '1rem' }}>Core Features</div>
+            <h2 className="h2" style={{ color: 'var(--text)' }}>Built for Content Creators</h2>
           </div>
 
-          <div className="flex flex-1 flex-col gap-6">
-            <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-indigo-500/20 backdrop-blur">
-              <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
-                <span>Campaign Timeline</span>
-                <span>Week 32</span>
-              </div>
-              <div className="mt-6 space-y-4">
-                {['Product Drop', 'Thought Leadership Thread', 'Influencer Collab', 'Launch Recap'].map(
-                  (label, index) => (
-                    <div
-                      key={label}
-                      className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-3"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-white">{label}</p>
-                        <p className="text-xs text-slate-500">
-                          {['Aug 14 • 9:00 AM', 'Aug 15 • 4:30 PM', 'Aug 16 • 1:00 PM', 'Aug 18 • 8:45 AM'][index]}
-                        </p>
-                      </div>
-                      <div className="rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-semibold text-indigo-200">
-                        Scheduled
-                      </div>
-                    </div>
-                  ),
-                )}
-              </div>
-              <div className="mt-6 rounded-2xl bg-gradient-to-r from-indigo-500/30 via-blue-500/20 to-slate-900 p-4">
-                <p className="text-xs uppercase tracking-[0.3em] text-indigo-200">Live insight</p>
-                <p className="mt-2 text-sm text-slate-200">
-                  Engagement projections trending <span className="font-semibold text-emerald-300">+42%</span> vs last
-                  week’s launch window.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 text-sm text-slate-400">
-              {statHighlights.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-5 shadow-lg shadow-indigo-500/10"
-                >
-                  <span className="text-xs uppercase tracking-[0.3em] text-slate-500">{stat.label}</span>
-                  <p className="mt-2 text-2xl font-semibold text-white">{stat.value}</p>
-                  <p className="mt-2 text-xs text-slate-500">{stat.change}</p>
-                </div>
-              ))}
-            </div>
+          <div className="features-grid" style={{ marginTop: '3rem' }}>
+            {[
+              { emoji: '🤖', title: 'Voice Learning AI', desc: 'Analyzes your previous posts across all platforms to understand your unique writing style, tone, and personality—then generates content that sounds like you.' },
+              { emoji: '⏰', title: 'Smart Scheduling', desc: 'AI analyzes your audience engagement patterns and suggests optimal posting times personalized to your followers. No more guessing.' },
+              { emoji: '✨', title: 'Content Brainstormer', desc: 'Generate fresh content ideas based on your past successful posts using advanced agentic AI. Pick favorites, refine, and perfect.' },
+              { emoji: '🎯', title: 'Multi-Platform', desc: 'Write once, publish everywhere. Schedule to 6 major platforms with platform-specific optimization built in.' },
+              { emoji: '📊', title: 'Analytics Dashboard', desc: 'Track performance with customizable reports. From professional to playful—get insights that match your style.' },
+              { emoji: '🔥', title: 'Gamified Streaks', desc: 'Build your posting streak with Duolingo-style gamification. Turn consistent content creation into a fun habit.' },
+            ].map((f, i) => (
+              <article key={i} className="card card-feature relative" style={{ padding: '2rem' }} role="article">
+                <span className="status-indicator" aria-hidden="true" />
+                <div className="icon-box" aria-hidden="true">{f.emoji}</div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '1rem', color: 'var(--text)' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.7 }}>{f.desc}</p>
+              </article>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="mx-auto max-w-6xl px-6 pb-24 lg:px-8">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 className="text-3xl font-semibold text-white sm:text-4xl">Platform built for performance</h2>
-              <p className="mt-3 max-w-2xl text-base text-slate-300">
-                Precision scheduling, automated approvals, and intelligence layered into every workflow. Omni Writes
-                gives your team the control room they deserve.
-              </p>
-            </div>
-            <div className="flex items-center gap-6 text-sm text-slate-400">
-              <div className="flex items-center gap-2">
-                <Gauge className="h-4 w-4 text-indigo-300" />
-                Live dashboards
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-indigo-300" />
-                Multi-team ready
-              </div>
-            </div>
+      {/* Platforms */}
+      <section className="px-8" style={{ padding: '5rem 2rem', background: 'var(--bg-alt)' }}>
+        <div className="container">
+          <div className="text-center" style={{ marginBottom: '4rem' }}>
+            <div className="section-label" style={{ marginBottom: '1rem' }}>Integrations</div>
+            <h2 className="h2" style={{ color: 'var(--text)' }}>Publish Everywhere</h2>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            {featureHighlights.map((feature) => (
-              <div
-                key={feature.title}
-                className="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 p-8 shadow-xl shadow-indigo-500/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-500/20"
-              >
-                <div className={`inline-flex items-center justify-center rounded-2xl bg-gradient-to-br ${feature.accent} p-3 text-white shadow-lg shadow-indigo-500/20`}>
-                  <feature.icon className="h-6 w-6" />
-                </div>
-                <h3 className="mt-6 text-xl font-semibold text-white">{feature.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-300">{feature.description}</p>
-                <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-indigo-200 transition group-hover:translate-x-1">
-                  Explore capabilities
-                  <ArrowRight className="h-4 w-4" />
-                </div>
+          <div className="platforms-grid" style={{ marginTop: '3rem' }}>
+            {[
+              { name: 'X / Twitter', emoji: '𝕏' },
+              { name: 'LinkedIn', emoji: '💼' },
+              { name: 'Instagram', emoji: '📸' },
+              { name: 'Facebook', emoji: '🔵' },
+              { name: 'Threads', emoji: '🧵' },
+              { name: 'TikTok', emoji: '🎵' },
+            ].map((p, idx) => (
+              <div key={idx} className="card card-platform" style={{ padding: '2rem' }}>
+                <div className="platform-icon" style={{ marginBottom: '1rem' }} aria-hidden="true">{p.emoji}</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text)' }}>{p.name}</div>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="mx-auto max-w-6xl px-6 pb-24 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr]">
-            <div className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900/60 to-slate-950 p-10 shadow-2xl shadow-indigo-500/20">
-              <h2 className="text-3xl font-semibold text-white sm:text-4xl">Playbooks that ship campaigns faster</h2>
-              <p className="mt-4 text-base text-slate-300">
-                We built Omni Writes with the rituals of social-first teams in mind. From briefing to analytics, your
-                momentum never stalls.
-              </p>
-              <div className="mt-10 grid gap-6 sm:grid-cols-2">
-                {automationHighlights.map((item) => (
-                  <div key={item.title} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-                    <item.icon className="h-6 w-6 text-indigo-200" />
-                    <p className="mt-4 text-lg font-semibold text-white">{item.title}</p>
-                    <p className="mt-2 text-sm text-slate-300">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
-                <div className="flex items-center gap-3 text-sm text-slate-400">
-                  <LineChart className="h-5 w-5 text-indigo-300" />
-                  Live Smart Suggestions
-                </div>
-                <p className="mt-3 text-sm text-slate-300">
-                  Let the platform highlight best send times, flag risk keywords, and auto-generate recap reports.
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-10">
-              <h3 className="text-2xl font-semibold text-white">Built for clarity</h3>
-              <p className="mt-3 text-sm text-slate-300">
-                Visual timelines, approval status at a glance, and campaign summaries that stakeholders actually read.
-              </p>
-
-              <div className="mt-8 space-y-6">
-                {workflowSteps.map((step) => (
-                  <div key={step.step} className="flex gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-indigo-400/30 bg-indigo-400/10 text-sm font-semibold text-indigo-200">
-                      {step.step}
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-white">{step.title}</p>
-                      <p className="mt-1 text-sm text-slate-300">{step.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* How it works */}
+      <section className="px-8" style={{ padding: '5rem 2rem', background: 'var(--bg)' }}>
+        <div className="container">
+          <div className="text-center" style={{ marginBottom: '4rem' }}>
+            <div className="section-label" style={{ marginBottom: '1rem' }}>Process</div>
+            <h2 className="h2" style={{ color: 'var(--text)' }}>How It Works</h2>
           </div>
-        </section>
 
-        <section className="mx-auto max-w-6xl px-6 pb-24 lg:px-8">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-10 shadow-2xl shadow-indigo-500/20">
-            <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-xl">
-                <h2 className="text-3xl font-semibold text-white sm:text-4xl">Teams scaling with Omni Writes</h2>
-                <p className="mt-3 text-base text-slate-300">
-                  From startups launching products to global brands managing daily chatter, Omni Writes powers social
-                  efforts that actually move metrics.
-                </p>
+          <div className="steps-grid" style={{ marginTop: '3rem' }}>
+            {[
+              { n: 1, title: 'Connect Accounts', desc: 'Link your social media profiles. Our AI analyzes your writing style from past posts.' },
+              { n: 2, title: 'Generate Content', desc: 'Use AI to generate ideas in your voice, or write from scratch with AI assistance.' },
+              { n: 3, title: 'Schedule Posts', desc: 'Pick optimal times or let AI suggest the best moments to reach your audience.' },
+              { n: 4, title: 'Track Performance', desc: 'Monitor results and let AI learn what resonates with your audience.' },
+            ].map((s) => (
+              <div key={s.n} className="card card-step" style={{ padding: '2rem' }}>
+                <div className="step-circle" aria-hidden="true">{s.n}</div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.75rem', color: 'var(--text)' }}>{s.title}</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', lineHeight: 1.6 }}>{s.desc}</p>
               </div>
-              <div className="flex items-center gap-6 text-sm text-slate-400">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-indigo-300" />
-                  Marketers & Strategists
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-indigo-300" />
-                  Weekly status clarity
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-12 grid gap-8 md:grid-cols-2">
-              {testimonials.map((testimonial) => (
-                <div key={testimonial.name} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-8">
-                  <p className="text-sm leading-relaxed text-slate-200">“{testimonial.quote}”</p>
-                  <div className="mt-6 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{testimonial.name}</p>
-                      <p className="text-xs text-slate-400">{testimonial.role}</p>
-                    </div>
-                    <div className="rounded-full border border-indigo-400/40 bg-indigo-400/10 px-3 py-1 text-xs font-semibold text-indigo-200">
-                      {testimonial.metric}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-5xl px-6 pb-24 lg:px-8">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-10 shadow-2xl shadow-indigo-500/20">
-            <h2 className="text-3xl font-semibold text-white sm:text-4xl">Frequently asked questions</h2>
-            <div className="mt-10 space-y-6">
-              {faqs.map((faq) => (
-                <div key={faq.question} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
-                  <p className="text-sm font-semibold text-white">{faq.question}</p>
-                  <p className="mt-2 text-sm text-slate-300">{faq.answer}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-5xl px-6 pb-24 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl border border-indigo-400/30 bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-600 p-10 shadow-2xl shadow-indigo-500/30">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),transparent_60%)] opacity-60" />
-            <div className="relative text-center text-white">
-              <p className="text-sm font-semibold uppercase tracking-[0.4em] text-white/70">Ready to launch</p>
-              <h2 className="mt-4 text-3xl font-semibold sm:text-4xl">
-                Bring your next social campaign to life in record time.
-              </h2>
-              <p className="mt-4 text-base text-indigo-100">
-                Start free today and upgrade once you are ready for deeper analytics, custom roles, and dedicated
-                success support.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-                <button
-                  onClick={handleGetStarted}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-base font-semibold text-slate-900 shadow-lg shadow-indigo-900/30 transition hover:-translate-y-0.5"
-                >
-                  {isSignedIn ? 'Back to Dashboard' : 'Start Free Trial'}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-                {!isSignedIn && (
-                  <button
-                    onClick={handleSignIn}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/30 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/10"
-                  >
-                    View Live Demo
-                  </button>
-                )}
-              </div>
-              <p className="mt-6 text-xs text-indigo-100">
-                No credit card required • Cancel anytime • Support that answers in minutes
-              </p>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="relative z-10 border-t border-slate-800 bg-slate-950/90">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3 text-slate-400">
-            <Sparkles className="h-4 w-4 text-indigo-300" />
-            © {new Date().getFullYear()} Omni Writes. Crafted for social-first teams.
-          </div>
-          <div className="flex items-center gap-6">
-            <span className="cursor-pointer transition hover:text-white">Status</span>
-            <span
-              onClick={() => navigate('/privacy')}
-              className="cursor-pointer transition hover:text-white"
-            >
-              Privacy
-            </span>
-            <span className="cursor-pointer transition hover:text-white">Support</span>
+            ))}
           </div>
         </div>
+      </section>
+
+      {/* CTA */}
+      <section className="px-8 text-center" style={{ padding: '6rem 2rem', background: 'var(--dark)' }}>
+        <div className="container-cta">
+          <h2 className="cta-heading" style={{ marginBottom: '1.5rem', color: 'var(--bg-alt)' }}>Join the Beta Program</h2>
+          <p style={{ fontSize: '1.05rem', color: 'var(--text-3)', lineHeight: 1.8, marginBottom: '2.5rem', maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>
+            Be among the first to experience AI-powered content creation that actually understands you. Limited spots available for MVP launch.
+          </p>
+          <button aria-label="Request access to Omni Writes" onClick={handleGetStarted} className="btn btn-primary" style={{ padding: '1rem 2.5rem', marginBottom: '1.5rem' }}>Request Access</button>
+          <div className="badge-cta">Free for Early Adopters • No Credit Card</div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="px-8 text-center" style={{ padding: '2.5rem 2rem', background: 'var(--black)', color: 'var(--text-3)', fontSize: '0.8rem', letterSpacing: '1px' }}>
+        <div className="font-bold uppercase" style={{ color: 'var(--bg-alt)', marginBottom: '0.5rem', letterSpacing: '2px' }}>OMNI WRITES</div>
+        <p style={{ marginBottom: '0.5rem', color: 'var(--text-3)' }}>AI-POWERED SOCIAL MEDIA SCHEDULER</p>
+        <p style={{ color: 'var(--text-3)' }}>MVP v0.5 • IN DEVELOPMENT</p>
       </footer>
     </div>
   )
 }
+

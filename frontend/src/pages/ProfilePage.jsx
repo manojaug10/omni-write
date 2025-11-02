@@ -847,7 +847,7 @@ function ProfilePage() {
                     <div>
                       <h2 className="text-lg font-semibold text-gray-900">Database Profile</h2>
                       <p className="mt-1 text-sm text-gray-500">
-                        Your Omni Write record stored in our database
+                        Your Omni Writes record stored in our database
                       </p>
                     </div>
                   </div>
@@ -904,7 +904,7 @@ function ProfilePage() {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">X (Twitter) Connection</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Connect your account to queue posts directly from Omni Write
+                      Connect your account to queue posts directly from Omni Writes
                     </p>
                   </div>
                 </div>
@@ -1265,7 +1265,7 @@ function ProfilePage() {
                       <div>
                         <h4 className="text-base font-semibold text-gray-900">Scheduled Posts</h4>
                         <p className="mt-1 text-sm text-gray-500">
-                          A quick look at everything queued from Omni Write
+                          A quick look at everything queued from Omni Writes
                         </p>
                       </div>
                     </div>

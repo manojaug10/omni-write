@@ -6,8 +6,9 @@ import SignUpPage from './pages/SignUpPage'
 import ProfilePage from './pages/ProfilePage'
 import DashboardPage from './pages/DashboardPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import ConnectAccountsPage from './pages/ConnectAccountsPage'
 import ProtectedRoute from './components/ProtectedRoute'
-import './App.css'
+// Global styles are provided via index.css and Tailwind
 
 function App() {
   const { isLoaded } = useUser()
@@ -28,6 +29,14 @@ function App() {
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route
+          path="/connect-accounts"
+          element={
+            <ProtectedRoute>
+              <ConnectAccountsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={
