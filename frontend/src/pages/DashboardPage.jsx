@@ -1,40 +1,24 @@
 import { useUser, useAuth } from '@clerk/clerk-react'
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, TrendingUp, Send, CheckCircle, Clock, MessageCircle, Hash, BarChart3 } from 'lucide-react'
+import { Settings, User, MessageCircle, Hash, Image, Link as LinkIcon, FileText, ChevronDown, Smile, Gift, TagIcon } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-
-const formatDateTime = (value) => {
-  if (!value) return 'Not set'
-  try {
-    const date = new Date(value)
-    const now = new Date()
-    const diffInHours = (date - now) / (1000 * 60 * 60)
-
-    if (diffInHours < 24 && diffInHours > -24) {
-      return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-    }
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return 'Not set'
-  }
-}
-
-const statusConfig = {
-  QUEUED: { label: 'Scheduled', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Clock },
-  POSTED: { label: 'Published', color: 'bg-green-50 text-green-700 border-green-200', icon: CheckCircle },
-  FAILED: { label: 'Failed', color: 'bg-red-50 text-red-700 border-red-200', icon: MessageCircle },
-  CANCELLED: { label: 'Cancelled', color: 'bg-gray-50 text-gray-700 border-gray-200', icon: MessageCircle },
-}
 
 function DashboardPage() {
   const { user, isLoaded } = useUser()
   const { getToken } = useAuth()
   const [xConnection, setXConnection] = useState(null)
-  const [scheduled, setScheduled] = useState([])
-  const [scheduledThreads, setScheduledThreads] = useState([])
+  const [threadsConnection, setThreadsConnection] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [composeText, setComposeText] = useState('')
+  const [selectedPlatforms, setSelectedPlatforms] = useState([])
+  const [platformTexts, setPlatformTexts] = useState({})
+  const [showSectionTwo, setShowSectionTwo] = useState(false)
+  const [showSectionThree, setShowSectionThree] = useState(false)
+  const [focusedPlatform, setFocusedPlatform] = useState(null)
+  const [showScheduleMenu, setShowScheduleMenu] = useState(false)
+  const [banner, setBanner] = useState(null)
 
   const fetchXConnection = useCallback(async () => {
     try {
@@ -52,367 +36,596 @@ function DashboardPage() {
     }
   }, [getToken])
 
-  const loadScheduled = useCallback(async () => {
+  const fetchThreadsConnection = useCallback(async () => {
     try {
       const token = await getToken()
-      const resp = await fetch(`${API_BASE_URL}/api/x/tweet/schedule`, {
+      const resp = await fetch(`${API_BASE_URL}/api/threads/connection`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: 'include',
       })
       if (resp.ok) {
         const data = await resp.json()
-        setScheduled(data.scheduled || [])
+        setThreadsConnection(data.connection)
       }
     } catch (err) {
-      console.error('Failed to load scheduled tweets', err)
-    }
-  }, [getToken])
-
-  const loadScheduledThreads = useCallback(async () => {
-    try {
-      const token = await getToken()
-      const resp = await fetch(`${API_BASE_URL}/api/x/thread/schedule`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        setScheduledThreads(data.scheduled || [])
-      }
-    } catch (err) {
-      console.error('Failed to load scheduled threads', err)
+      console.error('Failed to fetch Threads connection', err)
     }
   }, [getToken])
 
   useEffect(() => {
     if (isLoaded && user) {
-      Promise.all([fetchXConnection(), loadScheduled(), loadScheduledThreads()])
+      Promise.all([fetchXConnection(), fetchThreadsConnection()])
         .finally(() => setLoading(false))
     }
-  }, [isLoaded, user, fetchXConnection, loadScheduled, loadScheduledThreads])
+  }, [isLoaded, user, fetchXConnection, fetchThreadsConnection])
 
-  const queuedCount = scheduled.filter((s) => s.status === 'QUEUED').length +
-                      scheduledThreads.filter((t) => t.status === 'QUEUED').length
-  const postedCount = scheduled.filter((s) => s.status === 'POSTED').length +
-                      scheduledThreads.filter((t) => t.status === 'POSTED').length
-  const totalPosts = scheduled.length + scheduledThreads.length
+  const socialAccounts = [
+    {
+      id: 'x',
+      icon: MessageCircle,
+      name: 'X',
+      emoji: '𝕏',
+      connected: !!xConnection,
+      bgColor: '#3b82f6',
+    },
+    {
+      id: 'threads',
+      icon: Hash,
+      name: 'Threads',
+      emoji: '🧵',
+      connected: !!threadsConnection,
+      bgColor: '#a855f7',
+    },
+    {
+      id: 'instagram',
+      icon: Image,
+      name: 'Instagram',
+      emoji: '📸',
+      connected: false,
+      bgColor: '#ec4899',
+    },
+    {
+      id: 'linkedin',
+      icon: LinkIcon,
+      name: 'LinkedIn',
+      emoji: '💼',
+      connected: false,
+      bgColor: '#0ea5e9',
+    },
+    {
+      id: 'facebook',
+      icon: FileText,
+      name: 'Facebook',
+      emoji: '🔵',
+      connected: false,
+      bgColor: '#6366f1',
+    },
+  ]
 
-  const allScheduled = [
-    ...scheduled.map(s => ({ ...s, type: 'tweet', itemType: 'Single Tweet' })),
-    ...scheduledThreads.map(t => ({ ...t, type: 'thread', itemType: 'Thread' }))
-  ].sort((a, b) => new Date(a.scheduledAt || 0) - new Date(b.scheduledAt || 0))
+  const togglePlatform = (platformId) => {
+    setSelectedPlatforms(prev => {
+      const newSelection = prev.includes(platformId)
+        ? prev.filter(id => id !== platformId)
+        : [...prev, platformId]
+
+      if (!prev.includes(platformId)) {
+        setPlatformTexts(prevTexts => ({
+          ...prevTexts,
+          [platformId]: composeText
+        }))
+      }
+
+      return newSelection
+    })
+  }
+
+  const updatePlatformText = (platformId, text) => {
+    setPlatformTexts(prev => ({
+      ...prev,
+      [platformId]: text
+    }))
+  }
+
+  const handleCustomizeNetwork = () => {
+    if (selectedPlatforms.length > 0) {
+      setShowSectionTwo(true)
+    } else {
+      setBanner({ type: 'error', message: 'Please select at least one platform first!' })
+    }
+  }
+
+  const handleScheduleNow = () => {
+    setShowScheduleMenu(false)
+    setBanner({ type: 'success', message: 'Post scheduled immediately!' })
+  }
+
+  const handleCustomSchedule = () => {
+    setShowScheduleMenu(false)
+    window.location.href = '/profile'
+  }
+
+  const handleSaveAsDraft = () => {
+    setShowScheduleMenu(false)
+    setBanner({ type: 'success', message: 'Draft saved successfully!' })
+  }
+
+  const handlePlatformClick = (platformId) => {
+    setFocusedPlatform(platformId)
+    setShowSectionThree(true)
+    setShowSectionTwo(false)
+  }
+
+  const handleBackFromSectionTwo = () => {
+    setShowSectionTwo(false)
+  }
+
+  const handleBackFromSectionThree = () => {
+    setShowSectionThree(false)
+    setShowSectionTwo(true)
+  }
 
   if (!isLoaded || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-          <p className="text-sm font-medium text-gray-600">Loading your dashboard...</p>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1rem', color: 'var(--text-2)' }}>Loading...</div>
         </div>
       </div>
     )
   }
 
+  const connectedCount = socialAccounts.filter(a => a.connected).length
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
-      <header className="border-b border-white/60 bg-white/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Welcome back, {user?.firstName || 'there'}! Here's your content overview.
-              </p>
-            </div>
-            <Link
-              to="/profile"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105"
-            >
-              <Send className="h-4 w-4" />
-              Compose Post
+      <header className="site-header">
+        <div className="container" style={{ padding: '1.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontFamily: '"Space Mono", monospace', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text)' }}>
+            OMNI WRITES
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <Link to="/connect-accounts" className="btn btn-nav">
+              <Settings size={16} />
+              Settings
+            </Link>
+            <Link to="/profile" className="btn btn-nav">
+              <User size={16} />
+              Profile
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Stats Grid */}
-        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Scheduled Posts */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md">
-            <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 opacity-50 blur-2xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                  <Clock className="h-6 w-6" />
-                </div>
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-600">Scheduled</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{queuedCount}</p>
-                <p className="mt-1 text-xs text-gray-500">Posts in queue</p>
-              </div>
-            </div>
+      <main className="container" style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        {banner && (
+          <div className="card" style={{
+            padding: '1rem 1.5rem',
+            marginBottom: '1.5rem',
+            background: banner.type === 'success' ? '#dcfce7' : '#fee2e2',
+            border: `2px solid ${banner.type === 'success' ? '#86efac' : '#fca5a5'}`,
+            color: banner.type === 'success' ? '#166534' : '#991b1b',
+            fontWeight: 600,
+            fontSize: '0.85rem'
+          }}>
+            {banner.message}
           </div>
+        )}
 
-          {/* Published Posts */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md">
-            <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-green-100 to-green-50 opacity-50 blur-2xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600">
-                  <CheckCircle className="h-6 w-6" />
-                </div>
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-600">Published</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{postedCount}</p>
-                <p className="mt-1 text-xs text-gray-500">Successfully posted</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Total Posts */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md">
-            <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 opacity-50 blur-2xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-                  <BarChart3 className="h-6 w-6" />
-                </div>
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-600">Total Posts</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{totalPosts}</p>
-                <p className="mt-1 text-xs text-gray-500">All time created</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Connection Status */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition hover:shadow-md">
-            <div className="absolute right-0 top-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-50 opacity-50 blur-2xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-                  <MessageCircle className="h-6 w-6" />
-                </div>
-                <div className={`flex h-3 w-3 rounded-full ${xConnection ? 'bg-green-500' : 'bg-gray-300'}`} />
-              </div>
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-600">Connections</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{xConnection ? '1' : '0'}</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  {xConnection ? `@${xConnection.username || 'Connected'}` : 'No accounts linked'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Posts Timeline - 2 columns */}
-          <div className="lg:col-span-2">
-            <div className="rounded-2xl bg-white p-6 shadow-sm">
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Scheduled Posts</h2>
-                    <p className="text-sm text-gray-500">Your upcoming content</p>
-                  </div>
-                </div>
-                <Link
-                  to="/profile"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  View all →
-                </Link>
-              </div>
-
-              {/* Posts List */}
-              {allScheduled.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-16">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-                    <Calendar className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold text-gray-900">No posts scheduled</h3>
-                  <p className="mt-2 max-w-sm text-center text-sm text-gray-600">
-                    Start by creating your first post and scheduling it for the perfect time.
-                  </p>
-                  <Link
-                    to="/profile"
-                    className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                  >
-                    <Send className="h-4 w-4" />
-                    Create Post
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {allScheduled.slice(0, 6).map((item, index) => {
-                    const config = statusConfig[item.status] || statusConfig.QUEUED
-                    const StatusIcon = config.icon
+        {/* SECTION ONE: Initial Composer */}
+        {!showSectionTwo && !showSectionThree && (
+          <div className="card" style={{
+            padding: '3rem',
+            boxShadow: '0 10px 0 var(--shadow)',
+            background: 'linear-gradient(135deg, rgba(103, 232, 249, 0.08) 0%, rgba(45, 212, 191, 0.08) 100%), var(--card)'
+          }}>
+            {/* Platform Selection Circles */}
+            {connectedCount > 0 && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  {socialAccounts.filter(a => a.connected).map((account) => {
+                    const isSelected = selectedPlatforms.includes(account.id)
 
                     return (
-                      <div
-                        key={`${item.type}-${item.id}`}
-                        className="group rounded-xl border border-gray-100 bg-gradient-to-br from-white to-gray-50/50 p-5 transition hover:border-gray-200 hover:shadow-md"
+                      <button
+                        key={account.id}
+                        onClick={() => togglePlatform(account.id)}
+                        className="card-platform"
+                        style={{
+                          width: '100px',
+                          height: '100px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '1rem',
+                          cursor: 'pointer',
+                          border: isSelected ? `3px solid ${account.bgColor}` : '2px dashed var(--border)',
+                          background: isSelected ? 'var(--card)' : 'transparent',
+                          boxShadow: isSelected ? `0 6px 0 var(--shadow)` : 'none',
+                          transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                        }}
                       >
-                        <div className="flex gap-4">
-                          {/* Status Indicator */}
-                          <div className="flex flex-col items-center">
-                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                              item.status === 'POSTED' ? 'bg-green-100 text-green-600' :
-                              item.status === 'QUEUED' ? 'bg-blue-100 text-blue-600' :
-                              'bg-gray-100 text-gray-600'
-                            }`}>
-                              <StatusIcon className="h-5 w-5" />
-                            </div>
-                            {index < allScheduled.slice(0, 6).length - 1 && (
-                              <div className="mt-2 h-full w-px bg-gray-200" />
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="mb-3 flex flex-wrap items-center gap-2">
-                              <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${config.color}`}>
-                                {config.label}
-                              </span>
-                              <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700">
-                                <Hash className="h-3 w-3" />
-                                {item.itemType}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {formatDateTime(item.scheduledAt)}
-                              </span>
-                            </div>
-
-                            {/* Post Content */}
-                            {item.type === 'tweet' ? (
-                              <div className="rounded-lg bg-white p-4 shadow-sm">
-                                <p className="text-sm leading-relaxed text-gray-900">
-                                  {item.text?.substring(0, 200)}
-                                  {item.text?.length > 200 && '...'}
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm">
-                                <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-600">
-                                  <MessageCircle className="h-3.5 w-3.5" />
-                                  Thread with {item.tweets?.length || 0} tweets
-                                </div>
-                                {(item.tweets || []).slice(0, 2).map((tweet, idx) => (
-                                  <div key={idx} className="flex gap-2">
-                                    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
-                                      {idx + 1}
-                                    </span>
-                                    <p className="text-sm leading-relaxed text-gray-700">
-                                      {tweet.substring(0, 120)}{tweet.length > 120 && '...'}
-                                    </p>
-                                  </div>
-                                ))}
-                                {item.tweets && item.tweets.length > 2 && (
-                                  <p className="pl-7 text-xs italic text-gray-500">
-                                    +{item.tweets.length - 2} more tweets
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{account.emoji}</div>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text)' }}>
+                          {account.name}
                         </div>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sidebar - 1 column */}
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">Quick Actions</h3>
-              <div className="space-y-3">
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:shadow-lg hover:scale-[1.02]"
-                >
-                  <Send className="h-4 w-4" />
-                  New Post
-                </Link>
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
-                >
-                  <Calendar className="h-4 w-4" />
-                  View Calendar
-                </Link>
-                {!xConnection && (
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-3 rounded-xl border-2 border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Connect Account
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {/* Account Status */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">Connected Accounts</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-xl bg-gray-50 p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                      xConnection ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      <MessageCircle className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">X (Twitter)</p>
-                      {xConnection && (
-                        <p className="text-xs text-gray-600">@{xConnection.username || 'Connected'}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className={`h-2.5 w-2.5 rounded-full ${xConnection ? 'bg-green-500' : 'bg-gray-300'}`} />
-                </div>
-              </div>
-              {!xConnection && (
-                <p className="mt-4 text-xs text-gray-500">
-                  Connect your X account to start scheduling posts
+                <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-3)', letterSpacing: '0.5px' }}>
+                  {selectedPlatforms.length > 0
+                    ? `${selectedPlatforms.length} platform${selectedPlatforms.length !== 1 ? 's' : ''} selected • Full borders are active`
+                    : 'Click circles to select platforms • Dashed borders are inactive'}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Stats Summary */}
-            <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white shadow-lg">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide opacity-90">This Week</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm opacity-90">Posts scheduled</span>
-                  <span className="text-xl font-bold">{queuedCount}</span>
+            {/* Main Composer */}
+            <div className="card" style={{ padding: '2rem', boxShadow: '0 8px 0 var(--shadow)' }}>
+              <textarea
+                value={composeText}
+                onChange={(e) => setComposeText(e.target.value)}
+                placeholder="Write here"
+                style={{
+                  width: '100%',
+                  minHeight: '350px',
+                  resize: 'none',
+                  border: 'none',
+                  background: 'transparent',
+                  fontFamily: 'inherit',
+                  fontSize: '1rem',
+                  color: 'var(--text)',
+                  outline: 'none',
+                  lineHeight: 1.7
+                }}
+              />
+
+              {/* Bottom Actions */}
+              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                {/* Shape Buttons - Left */}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-nav"
+                    style={{ padding: '0.75rem', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Emojis"
+                  >
+                    <Smile size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-nav"
+                    style={{ padding: '0.75rem', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="GIFs"
+                  >
+                    <Gift size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-nav"
+                    style={{ padding: '0.75rem', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Hashtags"
+                  >
+                    <TagIcon size={18} />
+                  </button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm opacity-90">Posts published</span>
-                  <span className="text-xl font-bold">{postedCount}</span>
+
+                {/* Action Buttons - Right */}
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {/* Customize Network Button */}
+                  <button
+                    type="button"
+                    onClick={handleCustomizeNetwork}
+                    disabled={selectedPlatforms.length === 0}
+                    className="btn btn-secondary"
+                    style={{ padding: '1rem 2rem', opacity: selectedPlatforms.length === 0 ? 0.5 : 1, cursor: selectedPlatforms.length === 0 ? 'not-allowed' : 'pointer' }}
+                  >
+                    Customize Network
+                  </button>
+
+                  {/* Schedule Now Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowScheduleMenu(!showScheduleMenu)}
+                      className="btn btn-primary"
+                      style={{ padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      Schedule Now
+                      <ChevronDown size={16} style={{ transform: showScheduleMenu ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                    </button>
+
+                    {showScheduleMenu && (
+                      <div className="card" style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        right: 0,
+                        marginBottom: '0.5rem',
+                        width: '220px',
+                        padding: 0,
+                        boxShadow: '0 6px 0 var(--shadow)',
+                        zIndex: 10
+                      }}>
+                        <button
+                          onClick={handleScheduleNow}
+                          style={{
+                            width: '100%',
+                            padding: '1rem',
+                            textAlign: 'left',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: '2px solid var(--border)',
+                            fontFamily: 'inherit',
+                            fontWeight: 600,
+                            fontSize: '0.85rem',
+                            color: 'var(--text)',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = 'var(--bg-alt)'}
+                          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >
+                          Schedule Now
+                        </button>
+                        <button
+                          onClick={handleCustomSchedule}
+                          style={{
+                            width: '100%',
+                            padding: '1rem',
+                            textAlign: 'left',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: '2px solid var(--border)',
+                            fontFamily: 'inherit',
+                            fontWeight: 600,
+                            fontSize: '0.85rem',
+                            color: 'var(--text)',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = 'var(--bg-alt)'}
+                          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >
+                          Custom Schedule
+                        </button>
+                        <button
+                          onClick={handleSaveAsDraft}
+                          style={{
+                            width: '100%',
+                            padding: '1rem',
+                            textAlign: 'left',
+                            background: 'transparent',
+                            border: 'none',
+                            fontFamily: 'inherit',
+                            fontWeight: 600,
+                            fontSize: '0.85rem',
+                            color: 'var(--text)',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = 'var(--bg-alt)'}
+                          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >
+                          Save as Draft
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* No Platforms Connected */}
+            {connectedCount === 0 && (
+              <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                <p style={{ marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--text-2)' }}>
+                  No social media accounts connected yet.
+                </p>
+                <Link to="/connect-accounts" className="btn btn-primary" style={{ padding: '1rem 2rem' }}>
+                  Connect Accounts
+                </Link>
+              </div>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* SECTION TWO: All Platform Composers */}
+        {showSectionTwo && !showSectionThree && (
+          <div className="card" style={{
+            padding: '3rem 2.5rem',
+            boxShadow: '0 10px 0 var(--shadow)',
+            background: 'linear-gradient(135deg, #67e8f9 0%, #2dd4bf 100%)',
+            position: 'relative'
+          }}>
+            {/* Back Button */}
+            <div style={{ marginBottom: '2rem' }}>
+              <button onClick={handleBackFromSectionTwo} className="btn btn-nav">
+                ← Back to Composer
+              </button>
+            </div>
+
+            {/* Text Label on Right */}
+            <div style={{
+              position: 'absolute',
+              right: '2rem',
+              top: '3rem',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: 'var(--text)',
+              maxWidth: '200px',
+              textAlign: 'right'
+            }}>
+              Active Social Media that user want to work on
+            </div>
+
+            {/* Platform Cards with Purple Circles */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '700px' }}>
+              {selectedPlatforms.map((platformId) => {
+                const account = socialAccounts.find(a => a.id === platformId)
+                if (!account) return null
+
+                return (
+                  <div
+                    key={platformId}
+                    className="card"
+                    style={{
+                      padding: '1.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1.5rem',
+                      boxShadow: '0 6px 0 var(--shadow)',
+                      background: 'var(--card)'
+                    }}
+                  >
+                    {/* Purple Circle */}
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '50%',
+                      background: '#a855f7',
+                      flexShrink: 0
+                    }} />
+
+                    {/* Textarea */}
+                    <textarea
+                      value={platformTexts[platformId] || ''}
+                      onChange={(e) => updatePlatformText(platformId, e.target.value)}
+                      placeholder="Write here"
+                      onClick={() => handlePlatformClick(platformId)}
+                      style={{
+                        flex: 1,
+                        minHeight: '60px',
+                        resize: 'none',
+                        border: 'none',
+                        background: 'transparent',
+                        fontFamily: 'inherit',
+                        fontSize: '0.95rem',
+                        color: 'var(--text)',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* SECTION THREE: Single Platform Focus */}
+        {showSectionThree && focusedPlatform && (
+          <div className="card" style={{
+            padding: '3rem',
+            boxShadow: '0 10px 0 var(--shadow)',
+            background: 'linear-gradient(135deg, rgba(103, 232, 249, 0.08) 0%, rgba(45, 212, 191, 0.08) 100%), var(--card)'
+          }}>
+            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text)', fontFamily: '"Space Mono", monospace' }}>
+                {socialAccounts.find(a => a.id === focusedPlatform)?.name} Composer
+              </h2>
+              <button onClick={handleBackFromSectionThree} className="btn btn-nav">
+                ← Back to All
+              </button>
+            </div>
+
+            {/* Focused Platform Icon */}
+            <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ fontSize: '4rem' }}>
+                {socialAccounts.find(a => a.id === focusedPlatform)?.emoji}
+              </div>
+            </div>
+
+            {/* Focused Composer */}
+            <div className="card" style={{ padding: '2rem', boxShadow: '0 8px 0 var(--shadow)' }}>
+              <textarea
+                value={platformTexts[focusedPlatform] || ''}
+                onChange={(e) => updatePlatformText(focusedPlatform, e.target.value)}
+                placeholder="Write here"
+                style={{
+                  width: '100%',
+                  minHeight: '300px',
+                  resize: 'none',
+                  border: 'none',
+                  background: 'transparent',
+                  fontFamily: 'inherit',
+                  fontSize: '1rem',
+                  color: 'var(--text)',
+                  outline: 'none',
+                  lineHeight: 1.7
+                }}
+              />
+
+              {/* Bottom Actions */}
+              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                {/* Shape Buttons */}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button type="button" className="btn btn-nav" style={{ padding: '0.75rem', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Emojis">
+                    <Smile size={20} />
+                  </button>
+                  <button type="button" className="btn btn-nav" style={{ padding: '0.75rem', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="GIFs">
+                    <Gift size={18} />
+                  </button>
+                  <button type="button" className="btn btn-nav" style={{ padding: '0.75rem', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Hashtags">
+                    <TagIcon size={18} />
+                  </button>
+                </div>
+
+                {/* Schedule Button */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowScheduleMenu(!showScheduleMenu)}
+                    className="btn btn-primary"
+                    style={{ padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    Schedule Now
+                    <ChevronDown size={16} style={{ transform: showScheduleMenu ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                  </button>
+
+                  {showScheduleMenu && (
+                    <div className="card" style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '0.5rem', width: '220px', padding: 0, boxShadow: '0 6px 0 var(--shadow)', zIndex: 10 }}>
+                      <button onClick={handleScheduleNow} style={{ width: '100%', padding: '1rem', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '2px solid var(--border)', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text)', cursor: 'pointer' }} onMouseEnter={(e) => e.target.style.background = 'var(--bg-alt)'} onMouseLeave={(e) => e.target.style.background = 'transparent'}>Schedule Now</button>
+                      <button onClick={handleCustomSchedule} style={{ width: '100%', padding: '1rem', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: '2px solid var(--border)', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text)', cursor: 'pointer' }} onMouseEnter={(e) => e.target.style.background = 'var(--bg-alt)'} onMouseLeave={(e) => e.target.style.background = 'transparent'}>Custom Schedule</button>
+                      <button onClick={handleSaveAsDraft} style={{ width: '100%', padding: '1rem', textAlign: 'left', background: 'transparent', border: 'none', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text)', cursor: 'pointer' }} onMouseEnter={(e) => e.target.style.background = 'var(--bg-alt)'} onMouseLeave={(e) => e.target.style.background = 'transparent'}>Save as Draft</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Stacked Other Platforms */}
+            {selectedPlatforms.length > 1 && (
+              <div style={{ marginTop: '2rem' }}>
+                <p style={{ marginBottom: '1rem', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-3)' }}>
+                  Other Selected Platforms
+                </p>
+                <div style={{ position: 'relative', height: '80px', maxWidth: '600px', margin: '0 auto' }}>
+                  {selectedPlatforms.filter(id => id !== focusedPlatform).map((platformId, index) => (
+                    <button
+                      key={platformId}
+                      onClick={() => setFocusedPlatform(platformId)}
+                      className="card"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: '100%',
+                        height: '60px',
+                        cursor: 'pointer',
+                        boxShadow: '0 6px 0 var(--shadow)',
+                        transform: `translateY(${index * 6}px) translateX(${index * 6}px)`,
+                        zIndex: 10 - index,
+                        transition: 'transform 0.2s'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )
