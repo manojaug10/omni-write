@@ -132,10 +132,10 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="px-8 text-center" style={{ padding: '6rem 2rem', background: 'var(--dark)' }}>
+      <section className="px-8 text-center" style={{ padding: '6rem 2rem', background: 'var(--bg-alt)' }}>
         <div className="container-cta">
-          <h2 className="cta-heading" style={{ marginBottom: '1.5rem', color: 'var(--bg-alt)' }}>Join the Beta Program</h2>
-          <p style={{ fontSize: '1.05rem', color: 'var(--text-3)', lineHeight: 1.8, marginBottom: '2.5rem', maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>
+          <h2 className="cta-heading" style={{ marginBottom: '1.5rem', color: 'var(--text)' }}>Join the Beta Program</h2>
+          <p style={{ fontSize: '1.05rem', color: 'var(--text-2)', lineHeight: 1.8, marginBottom: '2.5rem', maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>
             Be among the first to experience AI-powered content creation that actually understands you. Limited spots available for MVP launch.
           </p>
           <button aria-label="Request access to Omni Writes" onClick={handleGetStarted} className="btn btn-primary" style={{ padding: '1rem 2.5rem', marginBottom: '1.5rem' }}>Request Access</button>
