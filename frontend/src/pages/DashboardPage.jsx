@@ -19,6 +19,7 @@ function DashboardPage() {
   const [focusedPlatform, setFocusedPlatform] = useState(null)
   const [showScheduleMenu, setShowScheduleMenu] = useState(false)
   const [banner, setBanner] = useState(null)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   const fetchXConnection = useCallback(async () => {
     try {
@@ -189,10 +190,10 @@ function DashboardPage() {
               <Settings size={16} />
               Settings
             </Link>
-            <Link to="/profile" className="btn btn-nav">
+            <button onClick={() => setShowProfileModal(true)} className="btn btn-nav">
               <User size={16} />
               Profile
-            </Link>
+            </button>
           </div>
         </div>
       </header>
@@ -627,6 +628,126 @@ function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '2rem'
+          }}
+          onClick={() => setShowProfileModal(false)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              padding: '2.5rem',
+              boxShadow: '0 20px 0 var(--shadow)',
+              background: 'var(--card)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text)', fontFamily: '"Space Mono", monospace' }}>
+                Profile
+              </h2>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="btn btn-nav"
+                style={{ padding: '0.5rem 1rem' }}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* User Info */}
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+                Name
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '1.5rem' }}>
+                {user?.firstName || 'Not set'} {user?.lastName || ''}
+              </div>
+
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+                Email
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '1.5rem' }}>
+                {user?.primaryEmailAddress?.emailAddress || 'Not set'}
+              </div>
+
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+                User ID
+              </div>
+              <div style={{ fontSize: '0.85rem', fontFamily: 'monospace', color: 'var(--text-2)', marginBottom: '1.5rem', wordBreak: 'break-all' }}>
+                {user?.id || 'Not set'}
+              </div>
+
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+                Member Since
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)' }}>
+                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not available'}
+              </div>
+            </div>
+
+            {/* Connected Accounts */}
+            <div style={{ paddingTop: '2rem', borderTop: '2px solid var(--border)' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text)', marginBottom: '1rem' }}>
+                Connected Accounts
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {xConnection && (
+                  <div className="card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 4px 0 var(--shadow)' }}>
+                    <div style={{ fontSize: '1.5rem' }}>𝕏</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>X (Twitter)</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>@{xConnection.username}</div>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--success)', letterSpacing: '1px' }}>CONNECTED</div>
+                  </div>
+                )}
+                {threadsConnection && (
+                  <div className="card" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 4px 0 var(--shadow)' }}>
+                    <div style={{ fontSize: '1.5rem' }}>🧵</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>Threads</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>@{threadsConnection.username}</div>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--success)', letterSpacing: '1px' }}>CONNECTED</div>
+                  </div>
+                )}
+                {!xConnection && !threadsConnection && (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-3)' }}>
+                    No accounts connected yet
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ marginTop: '2rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <Link to="/connect-accounts" className="btn btn-secondary" style={{ padding: '0.75rem 1.5rem' }} onClick={() => setShowProfileModal(false)}>
+                Manage Accounts
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

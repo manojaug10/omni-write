@@ -138,7 +138,7 @@ function ConnectAccountsPage() {
   }
 
   const handleContinue = () => {
-    navigate('/profile')
+    navigate('/dashboard')
   }
 
   const platforms = [
