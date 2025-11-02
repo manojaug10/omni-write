@@ -20,6 +20,9 @@ app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoute
 app.use(cors({
   origin: [
     'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://localhost:5176',
     'https://omni-write.vercel.app'
   ],
   credentials: true

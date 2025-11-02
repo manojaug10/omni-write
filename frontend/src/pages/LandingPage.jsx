@@ -7,7 +7,7 @@ export default function LandingPage() {
   const { isSignedIn } = useUser()
 
   const handleGetStarted = () => {
-    navigate(isSignedIn ? '/profile' : '/sign-up')
+    navigate(isSignedIn ? '/dashboard' : '/sign-up')
   }
 
   const handleSignIn = () => {
@@ -45,8 +45,8 @@ export default function LandingPage() {
             <button aria-label="Get early access to Omni Write" onClick={handleGetStarted} className="btn btn-primary" style={{ padding: '1rem 2.5rem' }}>
               Get Early Access
             </button>
-            <button aria-label={isSignedIn ? 'Go to Profile' : 'Explore Features'} onClick={handleSignIn} className="btn btn-secondary" style={{ padding: '1rem 2.5rem' }}>
-              {isSignedIn ? 'Go to Profile' : 'Explore Features'}
+            <button aria-label={isSignedIn ? 'Go to Profile' : 'Sign In'} onClick={handleSignIn} className="btn btn-secondary" style={{ padding: '1rem 2.5rem' }}>
+              {isSignedIn ? 'Go to Profile' : 'Sign In'}
             </button>
           </div>
         </div>
